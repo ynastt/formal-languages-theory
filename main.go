@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
-// построчное чтение из файла
+// построчное чтение входных данных из файла tests/test*.txt, * - номер теста
 // заполнение массивов нетерминалов, терминалов и карты: нетерминал -> спсиок правил переписыванния
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test4.txt")
+	file, err := os.Open("tests/test3.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -49,11 +50,15 @@ func makeListOfTermForms(nonTerms []string, rules map[string][]string) map[strin
 	nt := strings.Join(nonTerms, "")
 	forms := make(map[string][]string)
 	for _, n := range nonTerms {
-		fmt.Println(n)
+		//fmt.Println(n)
 		curForm := ""
 		val, ok := rules[n]
 		if ok {
-			fmt.Println(val)
+			//fmt.Println(val)
+			sort.Slice(val, func(i, j int) bool {
+				return len(val[i]) < len(val[j])
+			})
+			//fmt.Println(val)
 			for _, v := range val {
 				for _, sym := range v {
 					if strings.Contains(nt, string(sym)) {
