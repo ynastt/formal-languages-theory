@@ -13,18 +13,18 @@ import (
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test3.txt")
+	file, err := os.Open("tests/test4.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
 	fileScanner := bufio.NewScanner(file)
 	for fileScanner.Scan() {
 		if strings.Contains(fileScanner.Text(), "nonterminals") {
-			tmp := strings.TrimSpace(strings.Split(fileScanner.Text(), "=")[1])
+			tmp := strings.ReplaceAll(strings.Split(fileScanner.Text(), "=")[1], " ", "")
 			nonTerms = strings.Split(tmp, ",")
 			//fmt.Println(nonTerms[0:])
 		} else if strings.Contains(fileScanner.Text(), "terminals") {
-			tmp := strings.TrimSpace(strings.Split(fileScanner.Text(), "=")[1])
+			tmp := strings.ReplaceAll(strings.Split(fileScanner.Text(), "=")[1], " ", "")
 			terms = strings.Split(tmp, ",")
 			//fmt.Println(terms[0:])
 		} else if strings.Contains(fileScanner.Text(), "->") {
@@ -43,25 +43,31 @@ func parseTerms() ([]string, []string, map[string][]string) {
 	return terms, nonTerms, rules
 }
 
+// заполнение карты: нетерминал -> список терминальных форм (например, aSa преобразуется в a_a)
+// добавить сразу добавление непорождающих нетерминалов в отдельные классы эквивалентности
 func makeListOfTermForms(nonTerms []string, rules map[string][]string) map[string][]string {
+	nt := strings.Join(nonTerms, "")
 	forms := make(map[string][]string)
-	//var curForm string
-	nt := strings.ReplaceAll(strings.Join(nonTerms, ""), " ", "")
-	//fmt.Println(nt)
-	/*for _, n := range nonTerms {
-
-		//for v := 0; v < len(val); v++ {
-		fmt.Printf("%s- %s\n", key, v)
-		curForm = strings.ReplaceAll(v, n, "")
-		//fmt.Printf("term form: %s\n", curForm)
-		forms[key] = append(forms[key], curForm)
-
-	}*/
-	for _, val := range rules {
-		for _, v := range val {
-			if strings.ContainsAny(v, nt) {
-
+	for _, n := range nonTerms {
+		fmt.Println(n)
+		curForm := ""
+		val, ok := rules[n]
+		if ok {
+			fmt.Println(val)
+			for _, v := range val {
+				for _, sym := range v {
+					if strings.Contains(nt, string(sym)) {
+						curForm += "_"
+					} else {
+						curForm += string(sym)
+					}
+				}
+				curForm += " "
 			}
+			forms[n] = append(forms[n], curForm)
+		} else {
+			// add to special eq class
+			fmt.Println("this nonterminal is not generating!")
 		}
 	}
 	return forms
@@ -77,6 +83,7 @@ func main() {
 	fmt.Println("terms:")
 	fmt.Println(terms[0:])
 	fmt.Println(rules)
-	//termForms := makeListOfTermForms(nonTerms, rules)
-	//fmt.Println(termForms)
+	fmt.Println("==========terms forms===========")
+	termForms := makeListOfTermForms(nonTerms, rules)
+	fmt.Println(termForms)
 }
