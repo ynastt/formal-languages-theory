@@ -9,12 +9,26 @@ import (
 	"strings"
 )
 
+// удаление дупликатов среди терминальных форм для каждого нетерминала
+func checkForDuplicatesForms(slice []string) []string {
+	j := len(slice)
+	for i := 1; i < len(slice); i++ {
+		if slice[i] == slice[i-1] {
+			j = 1
+			//fmt.Println("dups:", slice[i], slice[i-1])
+			slice[j] = slice[i]
+			j++
+		}
+	}
+	return slice[:j]
+}
+
 // построчное чтение входных данных из файла tests/test*.txt, * - номер теста
 // заполнение массивов нетерминалов, терминалов и карты: нетерминал -> спсиок правил переписыванния
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test6.txt")
+	file, err := os.Open("tests/test2.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -41,6 +55,11 @@ func parseTerms() ([]string, []string, map[string][]string) {
 	if ok != nil {
 		log.Fatalf("Error with closing file: %s", ok)
 	}
+	for _, r := range rules {
+		sort.Slice(r, func(i, j int) bool {
+			return len(r[i]) < len(r[j])
+		})
+	}
 	return terms, nonTerms, rules
 }
 
@@ -57,9 +76,9 @@ func makeListOfTermForms(nonTerms []string, rules map[string][]string) (map[stri
 		val, ok := rules[n]
 		if ok {
 			//fmt.Println(val)
-			sort.Slice(val, func(i, j int) bool {
-				return len(val[i]) < len(val[j])
-			})
+			//sort.Slice(val, func(i, j int) bool {
+			//	return len(val[i]) < len(val[j])
+			//})
 			//fmt.Println(val)
 			for _, v := range val {
 				curForm := ""
@@ -72,11 +91,14 @@ func makeListOfTermForms(nonTerms []string, rules map[string][]string) (map[stri
 				}
 				forms[n] = append(forms[n], curForm)
 			}
-			//forms[n] = append(forms[n], curForm)
 		} else {
 			eqNotGenClass = append(eqNotGenClass, n)
 			//fmt.Println("this nonterminal is not generating!")
 		}
+	}
+	for k, f := range forms {
+		f = checkForDuplicatesForms(f)
+		forms[k] = f
 	}
 	return forms, eqNotGenClass
 }
@@ -104,6 +126,22 @@ func eqClassesDivision(termForms map[string][]string) map[string][]string {
 	return eqGenClasses
 }
 
+// функция проверки гипотезы разделения на классы эквивалентности
+// новое разбиение на классы эквивалентности в случае, когда в правилах
+// нетерминалы не попадают в один класс эквивалентности
+/*func checkEqClassDivision(firstEqClasses, rules map[string][]string, eqNotGenClass []string) map[string][]string {
+	newEqGenClasses := make(map[string][]string)
+	fmt.Println(len(firstEqClasses["Q"]))
+	for nonTerm, eqs := range firstEqClasses {
+		if len(eqs) != 0 {
+			for _, e := range eqs {
+
+			}
+		}
+	}
+	return newEqGenClasses
+}*/
+
 func main() {
 	terms, nonTerms, rules := parseTerms()
 	fmt.Println("nonterms:", nonTerms[0:])
@@ -112,7 +150,9 @@ func main() {
 	termForms, eqNotGenClass := makeListOfTermForms(nonTerms, rules)
 	fmt.Println("term forms:", termForms)
 	fmt.Println("notGenEqClass:", eqNotGenClass)
-	fmt.Println("=====test====")
 	eqGenClass := eqClassesDivision(termForms)
 	fmt.Println("first eq classes:", eqGenClass)
+	fmt.Println("=====test====")
+	//eqGenClass = checkEqClassDivision(eqGenClass, rules, eqNotGenClass)
+	//fmt.Println("new eq classes:", eqGenClass)
 }
