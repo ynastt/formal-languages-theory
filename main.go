@@ -14,7 +14,7 @@ import (
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test3.txt")
+	file, err := os.Open("tests/test6.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -31,7 +31,7 @@ func parseTerms() ([]string, []string, map[string][]string) {
 		} else if strings.Contains(fileScanner.Text(), "->") {
 			tmp := strings.Split(fileScanner.Text(), " -> ")
 			rules[tmp[0]] = append(rules[tmp[0]], strings.ReplaceAll(tmp[1], " ", ""))
-			fmt.Printf("%s - %s\n", tmp[0], rules[tmp[0]])
+			//fmt.Printf("%s - %s\n", tmp[0], rules[tmp[0]])
 		}
 	}
 	if err := fileScanner.Err(); err != nil {
@@ -44,14 +44,16 @@ func parseTerms() ([]string, []string, map[string][]string) {
 	return terms, nonTerms, rules
 }
 
-// заполнение карты: нетерминал -> список терминальных форм (например, aSa преобразуется в a_a)
-// добавить сразу добавление непорождающих нетерминалов в отдельные классы эквивалентности
-func makeListOfTermForms(nonTerms []string, rules map[string][]string) map[string][]string {
+// заполнение карты: нетерминал -> список терминальных форм (например, S-нетерминал, a-терминал, S->aSa => S->a_a)
+// добавление непорождающих нетерминалов в отдельный класс эквивалентности.
+// изначально созданы 2 класса эквивалентности: для порождающих и для непорождающих нетерминалов
+// далее при необходимости создаются новые классы эквивалентности.
+func makeListOfTermForms(nonTerms []string, rules map[string][]string) (map[string][]string, []string) {
+	var eqNotGenClass []string
 	nt := strings.Join(nonTerms, "")
 	forms := make(map[string][]string)
 	for _, n := range nonTerms {
 		//fmt.Println(n)
-		curForm := ""
 		val, ok := rules[n]
 		if ok {
 			//fmt.Println(val)
@@ -60,6 +62,7 @@ func makeListOfTermForms(nonTerms []string, rules map[string][]string) map[strin
 			})
 			//fmt.Println(val)
 			for _, v := range val {
+				curForm := ""
 				for _, sym := range v {
 					if strings.Contains(nt, string(sym)) {
 						curForm += "_"
@@ -67,28 +70,49 @@ func makeListOfTermForms(nonTerms []string, rules map[string][]string) map[strin
 						curForm += string(sym)
 					}
 				}
-				curForm += " "
+				forms[n] = append(forms[n], curForm)
 			}
-			forms[n] = append(forms[n], curForm)
+			//forms[n] = append(forms[n], curForm)
 		} else {
-			// add to special eq class
-			fmt.Println("this nonterminal is not generating!")
+			eqNotGenClass = append(eqNotGenClass, n)
+			//fmt.Println("this nonterminal is not generating!")
 		}
 	}
-	return forms
+	return forms, eqNotGenClass
 }
 
-//func EqClassesDivision() {
-//}
+// гипотеза разделения на классы эквивалентности на основе сравнения списка терминальных форм
+func eqClassesDivision(termForms map[string][]string) map[string][]string {
+	eqGenClasses := make(map[string][]string)
+	var single []string
+	for nonTerm, _ := range termForms {
+		eqGenClasses[nonTerm] = single
+		//fmt.Println()
+		//fmt.Println(nonTerm)
+		//fmt.Printf("joined nonterm: %s", strings.Join(termForms[nonTerm], ""))
+		for key, _ := range termForms {
+			if nonTerm != key {
+				//fmt.Printf("\n %s", key)
+				//fmt.Printf("\njoined eifq nonterm: %s,", strings.Join(termForms[key], ""))
+				if strings.Compare(strings.Join(termForms[nonTerm], ""),
+					strings.Join(termForms[key], "")) == 0 {
+					eqGenClasses[nonTerm] = append(eqGenClasses[nonTerm], key)
+				}
+			}
+		}
+	}
+	return eqGenClasses
+}
 
 func main() {
 	terms, nonTerms, rules := parseTerms()
-	fmt.Println("nonterms:")
-	fmt.Println(nonTerms[0:])
-	fmt.Println("terms:")
-	fmt.Println(terms[0:])
-	fmt.Println(rules)
-	fmt.Println("==========terms forms===========")
-	termForms := makeListOfTermForms(nonTerms, rules)
-	fmt.Println(termForms)
+	fmt.Println("nonterms:", nonTerms[0:])
+	fmt.Println("terms:", terms[0:])
+	fmt.Println("rules:", rules)
+	termForms, eqNotGenClass := makeListOfTermForms(nonTerms, rules)
+	fmt.Println("term forms:", termForms)
+	fmt.Println("notGenEqClass:", eqNotGenClass)
+	fmt.Println("=====test====")
+	eqGenClass := eqClassesDivision(termForms)
+	fmt.Println("first eq classes:", eqGenClass)
 }
