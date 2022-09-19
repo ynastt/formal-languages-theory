@@ -69,7 +69,7 @@ func removeClass(firstEqClasses []string, class1 string, nonTerm string) []strin
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test7.txt")
+	file, err := os.Open("tests/test3.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -195,7 +195,7 @@ func checkEqClassDivision(firstEqClasses []string, rules, termForms map[string][
 							class4 := findClass(c2, firstEqClasses)
 							//fmt.Printf("class nonterm _ : %s, class nt _ : %s\n", class3, class4)
 							if class3 != class4 {
-								//fmt.Println("несовпали классы экв у Ni' Nj'")
+								//fmt.Println("diff ceq classes for Ni' Nj' ")
 								if class3 != class1 {
 									firstEqClasses = removeClass(firstEqClasses, class1, nonTerm)
 									flag = true
