@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// замена нетерминалов в правой части правил на "_" для формирования терминальных форм
 func addUnderscore(v, nt string) (string, string) {
 	s, curForm := "", ""
 	for _, sym := range v {
@@ -36,6 +37,7 @@ func checkForDuplicates(slice []string) []string {
 	return slice
 }
 
+// поиск класса эквивалентности для нетерминала
 func findClass(nonTerm string, firstEqClasses []string) string {
 	var class string
 	for _, classNonTerm := range firstEqClasses {
@@ -47,6 +49,7 @@ func findClass(nonTerm string, firstEqClasses []string) string {
 	return class
 }
 
+// удаление неверного класса эквивалентности и замена на новые классы
 func removeClass(firstEqClasses []string, class1 string, nonTerm string) []string {
 	for ind, class := range firstEqClasses {
 		if class == class1 {
@@ -54,8 +57,8 @@ func removeClass(firstEqClasses []string, class1 string, nonTerm string) []strin
 			firstEqClasses[ind] = class
 			firstEqClasses = append(firstEqClasses, nonTerm)
 			sort.Strings(firstEqClasses)
-			fmt.Println("classes:", firstEqClasses)
-			fmt.Printf("%s was removed from class %s\n", nonTerm, class)
+			//fmt.Println("classes:", firstEqClasses)
+			//fmt.Printf("%s was removed from class %s\n", nonTerm, class)
 		}
 	}
 	return firstEqClasses
@@ -66,7 +69,7 @@ func removeClass(firstEqClasses []string, class1 string, nonTerm string) []strin
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test2.txt")
+	file, err := os.Open("tests/test7.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -155,7 +158,7 @@ func eqClassesDivision(termForms map[string][]string) []string {
 // функция проверки гипотезы разделения на классы эквивалентности
 // новое разбиение на классы эквивалентности в случае, когда в правилах
 // нетерминалы не попадают в один класс эквивалентности
-func checkEqClassDivision(firstEqClasses []string, rules, termForms map[string][]string, notGenEqClass, t, nt string) (bool, []string) {
+func checkEqClassDivision(firstEqClasses []string, rules, termForms map[string][]string, t, nt, gnt string) (bool, []string) {
 	flag := false
 	var nonTerms []string
 	for k := range termForms {
@@ -163,44 +166,44 @@ func checkEqClassDivision(firstEqClasses []string, rules, termForms map[string][
 	}
 	sort.Strings(nonTerms)
 	for _, nonTerm := range nonTerms {
-		fmt.Println("nonterm now:", nonTerm)
+		//fmt.Println("nonterm now:", nonTerm)
 		for _, rule1 := range rules[nonTerm] {
-			fmt.Printf("nonterm rule %s->%s\n", nonTerm, rule1)
-			if len(rule1) == 1 && strings.ContainsAny(t, rule1) {
-				//fmt.Println("-> term", rule1)
+			//fmt.Printf("nonterm rule %s->%s\n", nonTerm, rule1)
+			if len(rule1) == 1 && (strings.ContainsAny(t, rule1) || strings.ContainsAny(gnt, rule1)) {
+				//fmt.Println("-> term or not generating neterm", rule1)
 				continue
 			}
 			f1, c1 := addUnderscore(rule1, nt)
 			for _, key := range nonTerms {
 				if nonTerm != key {
-					fmt.Printf("\tnt is: %s\n", key)
+					//fmt.Printf("\tnt is: %s\n", key)
 					for _, rule2 := range rules[key] {
-						fmt.Printf("\t\tnt rule %s->%s\n", key, rule2)
-						if len(rule2) == 1 && strings.ContainsAny(t, rule2) {
-							//fmt.Println("-> term", rule2)
+						//fmt.Printf("\t\tnt rule %s->%s\n", key, rule2)
+						if len(rule2) == 1 && (strings.ContainsAny(t, rule2) || strings.ContainsAny(gnt, rule2)) {
+							//fmt.Println("-> term or not generating neterm", rule2)
 							continue
 						}
 						f2, c2 := addUnderscore(rule2, nt)
-						fmt.Println("HERE F1 F2, c1, c2", f1, f2, c1, c2)
-						fmt.Printf("%s->%s %s->%s\n", nonTerm, rule1, key, rule2)
+						//fmt.Println("HERE F1 F2, c1, c2", f1, f2, c1, c2)
+						//fmt.Printf("%s->%s %s->%s\n", nonTerm, rule1, key, rule2)
 						class1 := findClass(nonTerm, firstEqClasses)
 						class2 := findClass(key, firstEqClasses)
-						fmt.Printf("class nonterm: %s, class nt: %s\n", class1, class2)
+						//fmt.Printf("class nonterm: %s, class nt: %s\n", class1, class2)
 						if class1 == class2 && f1 == f2 {
-							fmt.Println("CLASSES and termforms ARE SAME")
+							//fmt.Println("CLASSES and termforms ARE SAME")
 							class3 := findClass(c1, firstEqClasses)
 							class4 := findClass(c2, firstEqClasses)
-							fmt.Printf("class nonterm _ : %s, class nt _ : %s\n", class3, class4)
+							//fmt.Printf("class nonterm _ : %s, class nt _ : %s\n", class3, class4)
 							if class3 != class4 {
-								fmt.Println("несовпали классы экв у Ni' Nj'")
+								//fmt.Println("несовпали классы экв у Ni' Nj'")
 								if class3 != class1 {
 									firstEqClasses = removeClass(firstEqClasses, class1, nonTerm)
 									flag = true
-									fmt.Println("now classes are:", firstEqClasses)
+									//fmt.Println("now classes are:", firstEqClasses)
 								} else if class4 != class1 {
 									firstEqClasses = removeClass(firstEqClasses, class1, key)
 									flag = true
-									fmt.Println("now classes are:", firstEqClasses)
+									//fmt.Println("now classes are:", firstEqClasses)
 								}
 							}
 						}
@@ -212,36 +215,97 @@ func checkEqClassDivision(firstEqClasses []string, rules, termForms map[string][
 	return flag, firstEqClasses
 }
 
-/*func outputNewRules() {
-
-}*/
+// ответ: Классы эквивалентности нетерминалов + новая грамматика, где в терминальные формы подставлены
+// соответствующие представители классов эквивалентности
+func outputNewRules(termForms, rules map[string][]string, eqGenClass []string, eqNotGenClass []string, t, nt, gnt string) {
+	var eqGenClassOld []string
+	for i, _ := range eqGenClass {
+		e := eqGenClass[i]
+		eqGenClassOld = append(eqGenClassOld, e)
+	}
+	//fmt.Println("old classes", eqGenClassOld)
+	for i, c := range eqGenClass {
+		if len(c) > 1 {
+			fmt.Print("{")
+			for j, sym := range c {
+				if j == len(c)-1 {
+					fmt.Printf("%s}\n", string(sym))
+				} else {
+					fmt.Printf("%s,", string(sym))
+				}
+			}
+			c = strings.ReplaceAll(c, c[1:], "")
+			eqGenClass[i] = c
+		} else {
+			fmt.Printf("{%s}\n", c)
+		}
+	}
+	if len(eqNotGenClass) != 0 {
+		fmt.Print("{")
+		for i, c := range eqNotGenClass {
+			if i == len(eqNotGenClass)-1 {
+				fmt.Printf("%s}\n", c)
+			} else {
+				fmt.Printf("%s,", c)
+			}
+		}
+	}
+	for nonTerm, form := range termForms {
+		for _, f := range form {
+			classOld := findClass(nonTerm, eqGenClassOld)
+			class := findClass(nonTerm, eqGenClass)
+			if len(class) != 0 {
+				if len(f) == 1 && (strings.ContainsAny(t, f) || strings.ContainsAny(gnt, f)) {
+					continue
+				} else {
+					for j, r := range rules[nonTerm] {
+						if len(f) == len(r) {
+							for _, sym := range r {
+								if strings.ContainsAny(t, string(sym)) {
+									continue
+								}
+								if strings.ContainsAny(classOld, string(sym)) {
+									r = strings.ReplaceAll(r, string(sym), class)
+									rules[nonTerm][j] = r
+									rules[nonTerm] = checkForDuplicates(rules[nonTerm])
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
 
 func main() {
 	terms, nonTerms, rules := parseTerms()
 	nt := strings.Join(nonTerms, "")
-	fmt.Println("nonterms:", nonTerms[0:])
-	fmt.Println("terms:", terms[0:])
-	fmt.Println("rules:", rules)
+	//fmt.Println("nonterms:", nonTerms[0:])
+	//fmt.Println("terms:", terms[0:])
+	//fmt.Println("rules:", rules)
 	termForms, eqNotGenClass := makeListOfTermForms(nonTerms, rules, nt)
-	fmt.Println("term forms:", termForms)
-	fmt.Println("notGenEqClass:", eqNotGenClass)
+	//fmt.Println("term forms:", termForms)
+	//fmt.Println("notGenEqClass:", eqNotGenClass)
 	eqGenClass := eqClassesDivision(termForms)
-	fmt.Println("first eq classes:", eqGenClass)
-
-	fmt.Println("====================test====================")
+	//fmt.Println("first eq classes:", eqGenClass)
 	var flag bool
-	//fmt.Println(len(eqGenClass))
-	//fmt.Println(len(termForms))
-	//fmt.Println(len(eqNotGenClass))
 	t := strings.Join(terms, "")
-	notGenEqClass := strings.Join(eqNotGenClass, "")
-	flag, eqGenClass = checkEqClassDivision(eqGenClass, rules, termForms, notGenEqClass, t, nt)
-	fmt.Println(flag)
+	gnt := strings.Join(eqNotGenClass, "")
+	flag, eqGenClass = checkEqClassDivision(eqGenClass, rules, termForms, t, nt, gnt)
+	//fmt.Println(flag)
 	for flag {
-		fmt.Println("again")
-		flag, eqGenClass = checkEqClassDivision(eqGenClass, rules, termForms, notGenEqClass, t, nt)
+		//fmt.Println("again")
+		flag, eqGenClass = checkEqClassDivision(eqGenClass, rules, termForms, t, nt, gnt)
 	}
-	fmt.Println("============================================")
-	fmt.Println("new eq classes:", eqGenClass)
-
+	//fmt.Println("new eq classes:", eqGenClass)
+	outputNewRules(termForms, rules, eqGenClass, eqNotGenClass, t, nt, gnt)
+	for nonTerm, _ := range termForms {
+		for j, _ := range rules[nonTerm] {
+			class := findClass(nonTerm, eqGenClass)
+			if nonTerm == class {
+				fmt.Printf("%s -> %s\n", nonTerm, rules[nonTerm][j])
+			}
+		}
+	}
 }
