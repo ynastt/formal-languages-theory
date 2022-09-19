@@ -1,5 +1,5 @@
 nonterminals = S, T, C, B
-terminals = a, b
+terminals = a, b, c
 S -> aSa
 S -> b
 S -> aTa
