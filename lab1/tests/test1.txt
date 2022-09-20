@@ -1,0 +1,9 @@
+nonterminals = S, T
+terminals = a, b
+S -> aSa
+S -> b
+S -> aTa
+T -> aTa
+T -> aSa
+T -> b
+
