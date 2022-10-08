@@ -1,9 +1,0 @@
-nonterminals = S, T
-terminals = a, b
-S -> aSb
-S -> bT
-T -> aTb
-T -> bS
-T -> a
-S -> a
-
