@@ -7,4 +7,4 @@ Task descriotion is here [TFL lab1 tasks](https://github.com/TonitaN/FormalLangu
 
 ### lab2 - infixes of regex (task 1mod3)
 Implemention the algorithm finding all infixes (regular subexpressions) for regex
-Task descriotion is here [TFL lab1 tasks](https://github.com/TonitaN/FormalLanguageTheory/blob/main/2022/labs/lab_tfl_2022_2.pdf).
+Task descriotion is here [TFL lab2 tasks](https://github.com/TonitaN/FormalLanguageTheory/blob/main/2022/labs/lab_tfl_2022_2.pdf).
