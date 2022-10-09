@@ -30,28 +30,6 @@ func getFirstAltIndex(raw string) int {
 	return -1
 }
 
-//func getAltIndexes(raw string) []int {
-//	outBracketsCount := 0
-//	altIndexes := make([]int, 0)
-//	for i := range raw {
-//		if outBracketsCount == 0 && raw[i] == '|' {
-//			altIndexes = append(altIndexes, i)
-//		} else if raw[i] == '(' {
-//			outBracketsCount++
-//		} else if raw[i] == ')' {
-//			outBracketsCount--
-//		}
-//	}
-//	return altIndexes
-//}
-
-//func getNumberOfSubstrings(raw string) int {
-//	if getFirstAltIndex(raw) == -1 {
-//		return 1
-//	}
-//	return len(getAltIndexes(raw)) + 1
-//}
-
 func getListOfAltSubstrings(raw string) []string {
 	s := make([]string, 0)
 	k := len(raw)
@@ -193,7 +171,6 @@ func parseCon(regex string) Node {
 	for i := 0; i < len(children); i++ {
 		child := parseStar(children[i])
 		childrenNodes = append(childrenNodes, child)
-		//fmt.Println("i`m here")
 	}
 	return Node{regex, childrenNodes, "Concat"}
 }
@@ -266,55 +243,5 @@ func main() {
 	fmt.Println("TEST:", regex)
 
 	start := regexParse(regex)
-	//fmt.Println("TEST:", start)
 	printGraph(start)
-	//testAlt := []string{
-	//	"abc",
-	//	"abc|",
-	//	"a|b|c",
-	//	"|a|b|c",
-	//	"(ab)|cd",
-	//	"(a||b)|cd|",
-	//	"c|a",
-	//	"a*|(ab)",
-	//}
-	//fmt.Println("test the alt parser")
-	//for _, t := range testAlt {
-	//	fmt.Println("=====")
-	//	fmt.Println(t)
-	//	s := getListOfAltSubstrings(t)
-	//	for i, v := range s {
-	//		if i == len(s)-1 {
-	//			fmt.Printf("'%s'\n", v)
-	//		} else {
-	//			fmt.Printf("'%s', ", v)
-	//		}
-	//	}
-	//}
-	//testConc := []string{
-	//	"abcdef",
-	//	"abcdef*",
-	//	"a*bcdef",
-	//	//"*abcdef",
-	//	"abc*def",
-	//	"a(bc)def",
-	//	"ab(cd)*ef*",
-	//	//"ab**c",
-	//	//"",
-	//	"a*",
-	//}
-	//fmt.Println("test the conc parser")
-	//for _, t := range testConc {
-	//	fmt.Println("=====")
-	//	fmt.Println(t)
-	//	s := getListOfSubstrings(t)
-	//	//fmt.Println(s)
-	//	for i, v := range s {
-	//		if i == len(s)-1 {
-	//			fmt.Printf("'%s'\n", v)
-	//		} else {
-	//			fmt.Printf("'%s', ", v)
-	//		}
-	//	}
-	//}
 }
