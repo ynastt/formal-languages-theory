@@ -16,35 +16,35 @@ type Node struct {
 	Label    string //Alt or Concat or Star or Sym
 }
 
-func getFirstAltIndex(raw string) int {
+func getFirstAltIndex(str string) int {
 	outBracketsCount := 0
-	for i := range raw {
-		if outBracketsCount == 0 && raw[i] == '|' {
+	for i := range str {
+		if outBracketsCount == 0 && str[i] == '|' {
 			return i
-		} else if raw[i] == '(' {
+		} else if str[i] == '(' {
 			outBracketsCount++
-		} else if raw[i] == ')' {
+		} else if str[i] == ')' {
 			outBracketsCount--
 		}
 	}
 	return -1
 }
 
-func getListOfAltSubstrings(raw string) []string {
+func getListOfAltSubstrings(str string) []string {
 	s := make([]string, 0)
-	k := len(raw)
+	k := len(str)
 	i := 0
 	for i <= k {
-		//fmt.Println("raw is:", raw, "s is:", s, "k is:", k, "i:", i)
-		alt := getFirstAltIndex(raw)
+		//fmt.Println("str is:", str, "s is:", s, "k is:", k, "i:", i)
+		alt := getFirstAltIndex(str)
 		//fmt.Println("alt", alt)
 		if alt == -1 {
-			s = append(s, raw)
+			s = append(s, str)
 			return s
 		} else {
-			s = append(s, string([]byte(raw)[:alt]))
-			raw = string([]byte(raw)[alt+1:])
-			k = len(raw)
+			s = append(s, string([]byte(str)[:alt]))
+			str = string([]byte(str)[alt+1:])
+			k = len(str)
 			i = 0
 		}
 		i++
@@ -52,52 +52,44 @@ func getListOfAltSubstrings(raw string) []string {
 	return append(s, "")
 }
 
-func getFirstConcIndex(raw string) (int, error) { //index of next after ')'
+func getFirstConcatIndex(str string) int { //index of next after ')'
 	outBracketsCount := 0
-	for i := range raw {
+	for i := range str {
 		if i > 0 {
-			if raw[i-1] == '(' {
+			if str[i-1] == '(' {
 				outBracketsCount++
 				//fmt.Println("i after (:", i)
-			} else if raw[i-1] == ')' {
+			} else if str[i-1] == ')' {
 				outBracketsCount--
 				//fmt.Println("i after ):", i)
 			}
 			if outBracketsCount == 0 {
-				if raw[i] == '(' || unicode.IsLetter(rune(raw[i])) {
+				if str[i] == '(' || unicode.IsLetter(rune(str[i])) {
 					//fmt.Println("concatenation")
-					return i, nil
-				}
-				if raw[i] == raw[i-1] && raw[i] == '*' {
-					return -1, errors.New("error due to ** in regex")
+					return i
 				}
 			}
 		}
 	}
-	return -1, nil
+	return -1
 }
 
-func getListOfSubstrings(raw string) []string {
+func getListOfSubstrings(str string) []string {
 	s := make([]string, 0)
 	//fmt.Println("initial s:", s)
-	k := len(raw)
+	k := len(str)
 	i := 0
 	for i <= k {
-		//fmt.Println("raw is:", raw, "s is:", s, "k is:", k, "i:", i)
-		concAfter, err := getFirstConcIndex(raw)
-		if err != nil {
-			fmt.Println(err)
-			s = make([]string, 0)
-			return s
-		}
+		//fmt.Println("str is:", str, "s is:", s, "k is:", k, "i:", i)
+		concAfter := getFirstConcatIndex(str)
 		//fmt.Println("concAfter", concAfter)
 		if concAfter == -1 {
-			s = append(s, raw)
+			s = append(s, str)
 			return s
 		} else {
-			s = append(s, string([]byte(raw)[:concAfter]))
-			raw = string([]byte(raw)[concAfter:])
-			k = len(raw)
+			s = append(s, string([]byte(str)[:concAfter]))
+			str = string([]byte(str)[concAfter:])
+			k = len(str)
 			i = 0
 		}
 		i++
@@ -129,24 +121,24 @@ func regexParse(regex string) Node {
 }
 
 func parseAlt(regex string) Node {
-	fmt.Println("TEST ALT:", regex)
+	//fmt.Println("TEST ALT:", regex)
 	n := len(regex)
 	if regex[0] == '(' && regex[n-1] == ')' {
 		regex = regex[1 : n-1]
-		fmt.Println("TEST ALT: got rid of out brackets", regex)
+		//fmt.Println("TEST ALT: got rid of out brackets", regex)
 	}
 	if getFirstAltIndex(regex) == -1 {
-		fmt.Println("TEST ALT: there is no out alternatives in regex", regex)
+		//fmt.Println("TEST ALT: there is no out alternatives in regex", regex)
 		return parseCon(regex)
 	}
-	fmt.Println("TEST ALT: get substrings of", regex)
+	//fmt.Println("TEST ALT: get substrings of", regex)
 	children := getListOfAltSubstrings(regex)
 	childrenNodes := make([]Node, 0, len(regex))
-	fmt.Printf("TEST ALT: substrings of '%s' are: ", regex)
-	for i := range children {
-		fmt.Printf("%s ", children[i])
-	}
-	fmt.Println()
+	//fmt.Printf("TEST ALT: substrings of '%s' are: ", regex)
+	//for i := range children {
+	//	fmt.Printf("%s ", children[i])
+	//}
+	//fmt.Println()
 	for i := range children {
 		child := parseCon(children[i])
 		childrenNodes = append(childrenNodes, child)
@@ -155,47 +147,48 @@ func parseAlt(regex string) Node {
 }
 
 func parseCon(regex string) Node {
-	fmt.Println("TEST CONCAT:", regex)
+	//fmt.Println("TEST CONCAT:", regex)
 	children := getListOfSubstrings(regex)
 	if len(children) == 1 {
-		fmt.Println("TEST CONCAT: there is no out concat in regex")
+		//fmt.Println("TEST CONCAT: there is no out concat in regex")
 		return parseStar(regex)
 	}
 	childrenNodes := make([]Node, 0, len(regex))
-	fmt.Println("TEST CONCAT: get substrings of", regex)
-	fmt.Printf("TEST CONCAT: substrings of '%s' are: ", regex)
-	for i := range children {
-		fmt.Printf("%s ", children[i])
-	}
-	fmt.Println()
+	//fmt.Println("TEST CONCAT: get substrings of", regex)
+	//fmt.Printf("TEST CONCAT: substrings of '%s' are: ", regex)
+	//for i := range children {
+	//	fmt.Printf("%s ", children[i])
+	//}
+	//fmt.Println()
 	for i := 0; i < len(children); i++ {
 		child := parseStar(children[i])
 		childrenNodes = append(childrenNodes, child)
+		//fmt.Println("i`m here")
 	}
 	return Node{regex, childrenNodes, "Concat"}
 }
 
 func parseStar(regex string) Node {
-	fmt.Println("TEST STAR:", regex)
+	//fmt.Println("TEST STAR:", regex)
 	n := len(regex)
 	if regex == "" {
-		return Node{regex, nil, "Sym"}
+		return Node{"ε", nil, "Sym"}
 	}
 	if len(regex) == 1 && unicode.IsLetter(rune(regex[0])) {
-		fmt.Println("TEST STAR: letter", regex)
+		//fmt.Println("TEST STAR: letter", regex)
 		return Node{string(regex), nil, "Sym"}
 	} else if regex[n-1] == '*' {
 		if len(regex) == 2 && unicode.IsLetter(rune(regex[0])) {
-			fmt.Println("TEST STAR: letter*", regex)
+			//fmt.Println("TEST STAR: letter*", regex)
 			child := Node{string(regex[0]), nil, "Sym"}
 			return Node{regex, []Node{child}, "Star"}
 		} else if regex[0] == '(' {
-			fmt.Println("TEST STAR: construction (regex)*", regex)
+			//fmt.Println("TEST STAR: construction (regex)*", regex)
 			child := parseAlt(regex[:n-1])
 			return Node{regex, []Node{child}, "Star"}
 		}
 	} else if regex[0] == '(' && regex[n-1] == ')' {
-		fmt.Println("TEST STAR: construction (regex)", regex)
+		//fmt.Println("TEST STAR: construction (regex)", regex)
 		return parseAlt(regex)
 	}
 	return Node{regex, nil, "StarX"}
@@ -243,5 +236,6 @@ func main() {
 	fmt.Println("TEST:", regex)
 
 	start := regexParse(regex)
+	//fmt.Println("TEST:", start)
 	printGraph(start)
 }
