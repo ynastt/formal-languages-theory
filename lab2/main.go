@@ -13,7 +13,7 @@ import (
 type Node struct {
 	Value    string
 	Children []Node
-	Label    string //Alt or Concat or Star or Sym
+	Label    string
 }
 
 func getFirstAltIndex(str string) int {
@@ -99,9 +99,7 @@ func getListOfSubstrings(str string) []string {
 
 func regexParse(regex string) Node {
 	if regex == "" {
-		err := errors.New("regex is an empty string")
-		log.Fatalf("Error with regex: %v", err)
-		os.Exit(1)
+		return Node{"ε", nil, "Empty"}
 	}
 	pairBracketsCount := 0
 	for i := range regex {
@@ -123,7 +121,21 @@ func regexParse(regex string) Node {
 func parseAlt(regex string) Node {
 	//fmt.Println("TEST ALT:", regex)
 	n := len(regex)
-	if regex[0] == '(' && regex[n-1] == ')' {
+	closingParenthesis := func(str string) int {
+		c := 0
+		for i := range str {
+			if str[i] == '(' {
+				c++
+			} else if str[i] == ')' {
+				c--
+				if c == 0 {
+					return i
+				}
+			}
+		}
+		return -1
+	}
+	if regex[0] == '(' && regex[n-1] == ')' && closingParenthesis(regex) == n-1 {
 		regex = regex[1 : n-1]
 		//fmt.Println("TEST ALT: got rid of out brackets", regex)
 	}
@@ -172,7 +184,7 @@ func parseStar(regex string) Node {
 	//fmt.Println("TEST STAR:", regex)
 	n := len(regex)
 	if regex == "" {
-		return Node{"ε", nil, "Sym"}
+		return Node{"ε", nil, "Empty"}
 	}
 	if len(regex) == 1 && unicode.IsLetter(rune(regex[0])) {
 		//fmt.Println("TEST STAR: letter", regex)
@@ -233,9 +245,123 @@ func main() {
 	if ok != nil {
 		log.Fatalf("Error with closing file: %s", ok)
 	}
-	fmt.Println("TEST:", regex)
+	//fmt.Println("TEST:", regex)
+	//
+	//start := regexParse(regex)
+	////fmt.Println("TEST:", start)
+	//printGraph(start)
+	//brzozovskiAutomat(start)
+	fmt.Println("=====tests for lambda()=====")
 
-	start := regexParse(regex)
-	//fmt.Println("TEST:", start)
-	printGraph(start)
+	tests := []string{
+		"a",
+		"", //это 'ε' в понимании парсера
+		"a*",
+		"ab",
+		"abc",
+		"a|b",
+		"a||d",
+		"a|b|c",
+	}
+	for _, t := range tests {
+		if t == "" {
+			fmt.Println("''")
+		} else {
+			fmt.Println(t)
+		}
+		r := regexParse(t)
+		fmt.Println("parsed regex is:", r.Value)
+		res := r.lambda()
+		if res.Value == "" {
+			fmt.Printf("lambda(%s)= %s\n", r.Value, "''")
+		} else {
+			fmt.Printf("lambda(%s)= %s\n", r.Value, r.lambda().Value)
+		}
+	}
+}
+
+/* Определим вспомогательную функцию lambda , такую, что
+если аргумент принимает ε, то она возвращает ε, иначе – ""
+(где "" - пустое множество, т.е. противоречие) */
+func (regex Node) lambda() Node {
+	children1 := make([]Node, 0)
+	var der Node
+	der.Value = ""
+	if regex.Label == "Alt" {
+		for i := range regex.Children {
+			children1 = append(children1, regex.Children[i].lambda())
+		}
+		for i := range children1 {
+			if children1[i].Value == "" {
+				continue
+			} else {
+				der.Value += children1[i].Value + "|"
+			}
+		}
+		der = Node{deleteExtraAlt(der.Value), children1, "Alt"}
+	} else if regex.Label == "Concat" {
+		for i := range regex.Children {
+			children1 = append(children1, regex.Children[i].lambda())
+		}
+		for i := range children1 {
+			der.Value += children1[i].Value
+		}
+		der = Node{der.Value, children1, "Concat"}
+	} else if regex.Label == "Star" {
+		//regex.Value = "ε"
+		der = Node{"ε", nil, "Empty"}
+	} else if regex.Label == "Sym" {
+		der = Node{"", nil, "Sym"}
+	} else if regex.Label == "Empty" {
+		der = Node{"ε", nil, "Empty"}
+	}
+	return der
+}
+
+/* использует вспом. функцию lambda()*/
+func (regex Node) getDerivative(str string) Node {
+	children1 := make([]Node, 0)
+	var der Node
+	if regex.Label == "Alt" {
+		children1 = make([]Node, 0)
+		for i := range regex.Children {
+			children1 = append(children1, regex.Children[i].getDerivative(str))
+		}
+		for i := range children1 {
+			der.Value += children1[i].Value + "|"
+		}
+		der = Node{der.Value, children1, "Alt"}
+	} else if regex.Label == "Concat" {
+		r, s := regex.Children[0], regex.Children[1]
+		var c1, c2 Node
+		c1 = Node{"conc", []Node{r.lambda(), s.getDerivative(str)}, "Concat"}
+		c2 = Node{"conc", []Node{r.getDerivative(str), s}, "Concat"}
+		regex = Node{regex.Value, []Node{c1, c2}, "Alt"}
+	} else if regex.Label == "Star" {
+		children1 = append(children1, regex.Children[0].getDerivative(str))
+		for i := 1; i < len(regex.Children); i++ {
+			children1 = append(children1, regex.Children[i])
+		}
+		der.Value = string(children1[0].Value) + regex.Value
+		der = Node{der.Value, children1, "Concat"}
+	} else if regex.Label == "Sym" {
+		if regex.Value == str {
+			der = Node{"ε", nil, "Empty"}
+		} else {
+			der = Node{"", nil, "Null"}
+		}
+	} else if regex.Label == "Empty" {
+		der = Node{"", nil, "Null"}
+	}
+	return der
+}
+
+func deleteExtraAlt(str string) string {
+	n := len(str)
+	if n > 0 {
+		if string(str[n-1]) == "|" {
+			str = str[:n-1]
+		}
+	}
+	return str
 }
