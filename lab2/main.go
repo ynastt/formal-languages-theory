@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"log"
 	"os"
 	"strings"
@@ -119,6 +120,7 @@ func regexParse(regex string) Node {
 }
 
 func parseAlt(regex string) Node {
+	value := ""
 	//fmt.Println("TEST ALT:", regex)
 	n := len(regex)
 	closingParenthesis := func(str string) int {
@@ -155,7 +157,10 @@ func parseAlt(regex string) Node {
 		child := parseCon(children[i])
 		childrenNodes = append(childrenNodes, child)
 	}
-	return Node{regex, childrenNodes, "Alt"}
+	for i := range childrenNodes {
+		value += childrenNodes[i].Value + "|"
+	}
+	return Node{deleteExtraAlt(value), childrenNodes, "Alt"}
 }
 
 func parseCon(regex string) Node {
@@ -246,43 +251,69 @@ func main() {
 		log.Fatalf("Error with closing file: %s", ok)
 	}
 	//fmt.Println("TEST:", regex)
-	//
 	//start := regexParse(regex)
-	////fmt.Println("TEST:", start)
+	//fmt.Println("TEST children:", start.Children)
+	//fmt.Println("value:", start.Value)
 	//printGraph(start)
 	//brzozovskiAutomat(start)
-	fmt.Println("=====tests for lambda()=====")
+	fmt.Println("=====tests for derivative()=====")
 
 	tests := []string{
 		"a",
 		"", //это 'ε' в понимании парсера
 		"a*",
 		"ab",
+		"bb",
+		"bbb",
 		"abc",
 		"a|b",
 		"a||d",
 		"a|b|c",
+		"(bab)*",
+		"(aa)*|(aaa)*",
+		"(bb|ab|(aaa)*)*",
+		"(aba)*|(a(baa)*ba)",
 	}
 	for _, t := range tests {
+		fmt.Println("------------------")
 		if t == "" {
 			fmt.Println("''")
 		} else {
 			fmt.Println(t)
 		}
 		r := regexParse(t)
+		alp := getAlphabetForRegex(r.Value)
+		fmt.Println("alphabet of regex:", alp)
 		fmt.Println("parsed regex is:", r.Value)
-		res := r.lambda()
-		if res.Value == "" {
-			fmt.Printf("lambda(%s)= %s\n", r.Value, "''")
-		} else {
-			fmt.Printf("lambda(%s)= %s\n", r.Value, r.lambda().Value)
+		//fmt.Println("label of parsed regex:", r.Label)
+		for _, s := range alp {
+			fmt.Println("derivatives with respect to", s)
+			res := simplifyDerivative(r.derivative(s))
+			if res.Value == "" {
+				fmt.Printf("derivative(%s)= %s\n", r.Value, "''")
+			} else {
+				fmt.Printf("derivative(%s)= %s\n", r.Value, res.Value)
+			}
 		}
 	}
 }
 
-/* Определим вспомогательную функцию lambda , такую, что
+func getAlphabetForRegex(t string) []string {
+	alp := make([]string, 0)
+	for i := range t {
+		if unicode.IsLetter(rune(t[i])) && t[i] != 206 && !slices.Contains(alp, string(t[i])) { //'ε' = 206
+			alp = append(alp, string(t[i]))
+		}
+	}
+	return alp
+}
+
+/*
+	Определим вспомогательную функцию lambda , такую, что
+
 если аргумент принимает ε, то она возвращает ε, иначе – ""
-(где "" - пустое множество, т.е. противоречие) */
+(где "" - пустое множество, т.е. противоречие)
+*/
 func (regex Node) lambda() Node {
 	children1 := make([]Node, 0)
 	var der Node
@@ -308,10 +339,9 @@ func (regex Node) lambda() Node {
 		}
 		der = Node{der.Value, children1, "Concat"}
 	} else if regex.Label == "Star" {
-		//regex.Value = "ε"
 		der = Node{"ε", nil, "Empty"}
 	} else if regex.Label == "Sym" {
-		der = Node{"", nil, "Sym"}
+		der = Node{"", nil, "Null"}
 	} else if regex.Label == "Empty" {
 		der = Node{"ε", nil, "Empty"}
 	}
@@ -319,26 +349,45 @@ func (regex Node) lambda() Node {
 }
 
 /* использует вспом. функцию lambda()*/
-func (regex Node) getDerivative(str string) Node {
+func (regex Node) derivative(str string) Node {
 	children1 := make([]Node, 0)
 	var der Node
 	if regex.Label == "Alt" {
 		children1 = make([]Node, 0)
 		for i := range regex.Children {
-			children1 = append(children1, regex.Children[i].getDerivative(str))
+			children1 = append(children1, regex.Children[i].derivative(str))
 		}
 		for i := range children1 {
-			der.Value += children1[i].Value + "|"
+			if children1[i].Value == "" {
+				continue
+			} else {
+				der.Value += children1[i].Value + "|"
+			}
+		}
+		der = Node{deleteExtraAlt(der.Value), children1, "Alt"}
+	} else if regex.Label == "Concat" {
+		phi, psi := regex.Children[0], regex.Children[1:]
+		phiDer := phi.derivative(str)
+		leftAlt := make([]Node, 0)
+		if phiDer.Value == "ε" {
+			leftAlt = psi
+		} else if phiDer.Value == "" {
+			leftAlt = nil
+		}
+		if leftAlt != nil {
+			children1 = append(children1, leftAlt...)
+		}
+		rightAlt := make([]Node, 0)
+		if phi.lambda().Value != "" { // lambda().Value = "" or "ε" <- definition; "ε" is concatenated; "" => rightAlt is ""
+			rightAlt = append(rightAlt, Node{regex.Value[1:], psi, "Concat"}.derivative(str))
+		}
+		children1 = append(children1, rightAlt...)
+		for i := range children1 {
+			der.Value += children1[i].Value
 		}
 		der = Node{der.Value, children1, "Alt"}
-	} else if regex.Label == "Concat" {
-		r, s := regex.Children[0], regex.Children[1]
-		var c1, c2 Node
-		c1 = Node{"conc", []Node{r.lambda(), s.getDerivative(str)}, "Concat"}
-		c2 = Node{"conc", []Node{r.getDerivative(str), s}, "Concat"}
-		regex = Node{regex.Value, []Node{c1, c2}, "Alt"}
 	} else if regex.Label == "Star" {
-		children1 = append(children1, regex.Children[0].getDerivative(str))
+		children1 = append(children1, regex.Children[0].derivative(str))
 		for i := 1; i < len(regex.Children); i++ {
 			children1 = append(children1, regex.Children[i])
 		}
@@ -352,6 +401,19 @@ func (regex Node) getDerivative(str string) Node {
 		}
 	} else if regex.Label == "Empty" {
 		der = Node{"", nil, "Null"}
+	}
+	return der
+}
+
+func simplifyDerivative(regex Node) Node {
+	var der Node
+	if regex.Label == "Concat" {
+		v := strings.ReplaceAll(regex.Value, "ε", "")
+		if v[len(v)-1] == '*' {
+			der = Node{v, nil, "Star"}
+		}
+	} else {
+		der = regex
 	}
 	return der
 }
