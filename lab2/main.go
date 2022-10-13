@@ -308,12 +308,10 @@ func getAlphabetForRegex(t string) []string {
 	return alp
 }
 
-/*
-	Определим вспомогательную функцию lambda , такую, что
+//Определим вспомогательную функцию lambda , такую, что
+//если аргумент принимает ε, то она возвращает ε, иначе – ""
+//(где "" - пустое множество, т.е. противоречие)
 
-если аргумент принимает ε, то она возвращает ε, иначе – ""
-(где "" - пустое множество, т.е. противоречие)
-*/
 func (regex Node) lambda() Node {
 	children1 := make([]Node, 0)
 	var der Node
@@ -364,7 +362,11 @@ func (regex Node) derivative(str string) Node {
 				der.Value += children1[i].Value + "|"
 			}
 		}
-		der = Node{deleteExtraAlt(der.Value), children1, "Alt"}
+		der.Value = deleteExtraAlt(der.Value)
+		if len(notNull(children1)) > 1 {
+			der.Value = "(" + der.Value[:] + ")"
+		}
+		der = Node{der.Value, children1, "Alt"}
 	} else if regex.Label == "Concat" {
 		phi, psi := regex.Children[0], regex.Children[1:]
 		phiDer := phi.derivative(str)
@@ -391,7 +393,11 @@ func (regex Node) derivative(str string) Node {
 		for i := 1; i < len(regex.Children); i++ {
 			children1 = append(children1, regex.Children[i])
 		}
-		der.Value = string(children1[0].Value) + regex.Value
+		if children1[0].Value != "" {
+			der.Value = children1[0].Value + regex.Value
+		} else {
+			der.Value = ""
+		}
 		der = Node{der.Value, children1, "Concat"}
 	} else if regex.Label == "Sym" {
 		if regex.Value == str {
@@ -405,12 +411,27 @@ func (regex Node) derivative(str string) Node {
 	return der
 }
 
+func notNull(arr []Node) []Node {
+	upd := make([]Node, 0)
+	for i := range arr {
+		if arr[i].Value == "" {
+			continue
+		} else {
+			upd = append(upd, arr[i])
+		}
+	}
+	return upd
+}
+
 func simplifyDerivative(regex Node) Node {
 	var der Node
 	if regex.Label == "Concat" {
 		v := strings.ReplaceAll(regex.Value, "ε", "")
-		if v[len(v)-1] == '*' {
-			der = Node{v, nil, "Star"}
+		n := len(v)
+		if n > 0 {
+			if v[n-1] == '*' {
+				der = Node{v, nil, "Star"}
+			}
 		}
 	} else {
 		der = regex
