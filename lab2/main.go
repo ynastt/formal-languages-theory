@@ -579,13 +579,13 @@ func main() {
 	//fmt.Println()
 	automata := brzozowskiAutomata(start)
 	printAutomata(automata)
-	fmt.Println("States of R auto:", automata.Nodes)
+	//fmt.Println("States of R auto:", automataStates(automata.Nodes))
 	res := make([]string, 0)
 	for _, s := range automata.Nodes {
 		s = reverse(s)
 		rsi := regexParse(s)
-		qij := brzozowskiAutomata(rsi).Nodes
-		fmt.Println("States of Sr auto:", qij)
+		qij := automataStates(brzozowskiAutomata(rsi).Nodes)
+		//fmt.Println("States of Sr auto:", qij)
 		for _, q := range qij {
 			res = append(res, reverse(q))
 		}
@@ -601,7 +601,7 @@ func main() {
 			unique[r] = true
 		}
 	}
-	fmt.Println("REGEX INFIXES:")
+	fmt.Println("Regex infixes:")
 	sort.Sort(sort.StringSlice(result))
 	for _, r := range result {
 		fmt.Printf("\t%s\n", r)
@@ -650,6 +650,21 @@ func main() {
 	//for _, c := range parsed.Children {
 	//	fmt.Print(c.Value, ", ")
 	//}
+}
+
+func automataStates(nodes []string) []string {
+	states := make([]string, 0)
+	for _, n := range nodes {
+		reg := regexParse(n)
+		if reg.Label == "Alt" {
+			for _, c := range reg.Children {
+				states = append(states, c.Value)
+			}
+		} else {
+			states = append(states, n)
+		}
+	}
+	return states
 }
 
 func reverse(nod string) string {
@@ -774,31 +789,6 @@ func brzozowskiAutomata(start Node) BrzozovskiAuto {
 	}
 	return a
 }
-
-//func condition(a BrzozovskiAuto) (bool, BrzozovskiAuto) {
-//	//fmt.Print("\nstates of fa: ")
-//	//for _, c := range a.Nodes {
-//	//	fmt.Print(c, " ")
-//	//}
-//	oldStates := a.Nodes
-//	//fmt.Print("\nOLDSTATES: ")
-//	//for _, c := range oldStates {
-//	//	fmt.Print(c, " ")
-//	//}
-//	for _, w := range a.Alphabet {
-//		a.Nodes, a.Edges = addStateDerivative(a, w)
-//		a = BrzozovskiAuto{a.Regex, a.Alphabet, a.Nodes, a.Edges}
-//		//fmt.Print("\nHERE states: ")
-//		//fmt.Print("{")
-//		//for _, c := range a.Nodes {
-//		//	fmt.Print(c, ", ")
-//		//}
-//		//fmt.Println("}")
-//	}
-//	newStatesLength := len(a.Nodes)
-//	//fmt.Println("lengths:", len(oldStates), newStatesLength)
-//	return newStatesLength > len(oldStates), a
-//}
 
 func addStateDerivative(a BrzozovskiAuto, w string) ([]string, []Edge) {
 	nodesCopy := a.Nodes
