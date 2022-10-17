@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slices"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -15,6 +16,19 @@ type Node struct {
 	Value    string
 	Children []Node
 	Label    string
+}
+
+type Edge struct {
+	Parent    string
+	Child     string
+	EdgeLabel string // derivative with respect to
+}
+
+type BrzozovskiAuto struct {
+	Regex    string
+	Alphabet []string
+	Nodes    []string
+	Edges    []Edge
 }
 
 func getFirstAltIndex(str string) int {
@@ -98,6 +112,32 @@ func getListOfSubstrings(str string) []string {
 	return s
 }
 
+func closingParenthesis(str string) int {
+	c := 0
+	for i := range str {
+		if str[i] == '(' {
+			c++
+		} else if str[i] == ')' {
+			c--
+			if c == 0 {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+func removeExtraParenthesis(regex string) string {
+	n := len(regex)
+	if n > 0 {
+		if regex[0] == '(' && regex[n-1] == ')' && closingParenthesis(regex) == n-1 {
+			regex = regex[1 : n-1]
+			//fmt.Println(": got rid of out brackets", regex)
+		}
+	}
+	return regex
+}
+
 func regexParse(regex string) Node {
 	if regex == "" {
 		return Node{"ε", nil, "Empty"}
@@ -112,7 +152,7 @@ func regexParse(regex string) Node {
 		}
 	}
 	if pairBracketsCount != 0 {
-		err := errors.New("regex has extra brackets")
+		err := errors.New("regex has extra no-pair brackets")
 		log.Fatalf("Error with regex: %v", err)
 		os.Exit(1)
 	}
@@ -122,30 +162,12 @@ func regexParse(regex string) Node {
 func parseAlt(regex string) Node {
 	value := ""
 	//fmt.Println("TEST ALT:", regex)
-	n := len(regex)
-	closingParenthesis := func(str string) int {
-		c := 0
-		for i := range str {
-			if str[i] == '(' {
-				c++
-			} else if str[i] == ')' {
-				c--
-				if c == 0 {
-					return i
-				}
-			}
-		}
-		return -1
-	}
-	if regex[0] == '(' && regex[n-1] == ')' && closingParenthesis(regex) == n-1 {
-		regex = regex[1 : n-1]
-		//fmt.Println("TEST ALT: got rid of out brackets", regex)
-	}
+	regex = removeExtraParenthesis(regex)
+	//fmt.Println(": got rid of out brackets", regex)
 	if getFirstAltIndex(regex) == -1 {
 		//fmt.Println("TEST ALT: there is no out alternatives in regex", regex)
 		return parseCon(regex)
 	}
-	//fmt.Println("TEST ALT: get substrings of", regex)
 	children := getListOfAltSubstrings(regex)
 	childrenNodes := make([]Node, 0, len(regex))
 	//fmt.Printf("TEST ALT: substrings of '%s' are: ", regex)
@@ -164,12 +186,14 @@ func parseAlt(regex string) Node {
 }
 
 func parseCon(regex string) Node {
+	regex = removeExtraParenthesis(regex)
 	//fmt.Println("TEST CONCAT:", regex)
 	children := getListOfSubstrings(regex)
 	if len(children) == 1 {
 		//fmt.Println("TEST CONCAT: there is no out concat in regex")
 		return parseStar(regex)
 	}
+
 	childrenNodes := make([]Node, 0, len(regex))
 	//fmt.Println("TEST CONCAT: get substrings of", regex)
 	//fmt.Printf("TEST CONCAT: substrings of '%s' are: ", regex)
@@ -188,7 +212,7 @@ func parseCon(regex string) Node {
 func parseStar(regex string) Node {
 	//fmt.Println("TEST STAR:", regex)
 	n := len(regex)
-	if regex == "" {
+	if regex == "" || regex == "ε" {
 		return Node{"ε", nil, "Empty"}
 	}
 	if len(regex) == 1 && unicode.IsLetter(rune(regex[0])) {
@@ -208,24 +232,307 @@ func parseStar(regex string) Node {
 		//fmt.Println("TEST STAR: construction (regex)", regex)
 		return parseAlt(regex)
 	}
-	return Node{regex, nil, "StarX"}
+	return Node{regex, nil, "Null"}
 }
 
-func printGraphNodes(start Node) {
+func printNodes(start Node) {
 	for i := range start.Children {
 		fmt.Printf("\t%s [label = %s] -> ", start.Value, start.Label)
-		fmt.Printf("%v [label = %s]\n", start.Children[i].Value, start.Children[i].Label)
-		//fmt.Printf("%v\n", start.Children[i])
+		fmt.Printf("%s [label = %s]\n", start.Children[i].Value, start.Children[i].Label)
 	}
 	for i := range start.Children {
-		printGraphNodes(start.Children[i])
+		printNodes(start.Children[i])
 	}
 }
 
 func printGraph(start Node) {
-	fmt.Println("graph {")
-	printGraphNodes(start)
-	fmt.Println("}")
+	fmt.Println("\ngraph {")
+	printNodes(start)
+	fmt.Printf("}\n")
+}
+
+func printAutomata(automata BrzozovskiAuto) {
+	fmt.Println("\nBrzozovski automat {")
+	for _, e := range automata.Edges {
+		fmt.Printf("\t%s  --- %s ---> %s\n", e.Parent, e.EdgeLabel, e.Child)
+	}
+	fmt.Printf("}\n")
+}
+
+func getAlphabetForRegex(t string) []string {
+	alp := make([]string, 0)
+	for i := range t {
+		if unicode.IsLetter(rune(t[i])) && t[i] != 206 && !slices.Contains(alp, string(t[i])) { //'ε' = 206
+			alp = append(alp, string(t[i]))
+		}
+	}
+	return alp
+}
+
+func notNullNotEmpty(arr []Node) []Node {
+	upd := make([]Node, 0)
+	for i := range arr {
+		if arr[i].Value == "" || arr[i].Value == "ε" {
+			continue
+		} else {
+			upd = append(upd, arr[i])
+		}
+	}
+	return upd
+}
+
+func deleteExtraAlt(str string) string {
+	n := len(str)
+	if n > 0 {
+		if string(str[n-1]) == "|" {
+			str = str[:n-1]
+		}
+	}
+	return str
+}
+
+func areNodesDuplicates(el string, arr []string) bool {
+	//fmt.Println("\nnow states of auto are: ")
+	//for _, c := range arr {
+	//	fmt.Print(c, ",")
+	//}
+	//fmt.Println()
+	//fmt.Println(el)
+	for _, a := range arr {
+		//fmt.Println("a:", a)
+		if a == el {
+			//fmt.Println("SAME a:", a, el)
+			return true
+		}
+	}
+	return false
+}
+
+func areEdgesDuplicates(el Edge, arr []Edge) bool {
+	//fmt.Println("\nnow edges of auto are: ")
+	//for _, c := range arr {
+	//	fmt.Printf("\t%s  --- %s ---> %s\n", c.Parent, c.EdgeLabel, c.Child)
+	//}
+	//fmt.Println()
+	//fmt.Printf("el edge is: %s  --- %s ---> %s\n", el.Parent, el.EdgeLabel, el.Child)
+	for _, a := range arr {
+		//fmt.Printf("a edge is: %s  --- %s ---> %s\n", a.Parent, a.EdgeLabel, a.Child)
+		if a == el {
+			//fmt.Println("SAME")
+			return true
+		}
+	}
+	return false
+}
+
+// Определим вспомогательную функцию lambda , такую, что
+// если аргумент принимает ε, то она возвращает ε, иначе – ""
+// (где "" - пустое множество, т.е. противоречие)
+func (regex Node) lambda() Node {
+	children1 := make([]Node, 0)
+	var der Node
+	der.Value = ""
+	if regex.Label == "Alt" {
+		for i := range regex.Children {
+			children1 = append(children1, regex.Children[i].lambda())
+		}
+		for i := range children1 {
+			if children1[i].Value == "" {
+				continue
+			} else {
+				der.Value += children1[i].Value + "|"
+			}
+		}
+		der = Node{deleteExtraAlt(der.Value), children1, "Alt"}
+	} else if regex.Label == "Concat" {
+		for i := range regex.Children {
+			children1 = append(children1, regex.Children[i].lambda())
+		}
+		for i := range children1 {
+			if children1[i].Value == "" {
+				der.Value = ""
+				break
+			} else {
+				der.Value += children1[i].Value
+			}
+		}
+		der = Node{der.Value, children1, "Concat"}
+	} else if regex.Label == "Star" {
+		der = Node{"ε", nil, "Empty"}
+	} else if regex.Label == "Sym" {
+		der = Node{"", nil, "Null"}
+	} else if regex.Label == "Empty" {
+		der = Node{"ε", nil, "Empty"}
+	}
+	return der
+}
+
+// Функция производной по строке использует вспом. функцию lambda()
+func (regex Node) derivative(str string) Node {
+	children1 := make([]Node, 0)
+	var der Node
+	der.Value = ""
+	if regex.Label == "Alt" {
+		children1 = make([]Node, 0)
+		for _, c := range regex.Children {
+			childRegex := regexParse(c.Value)
+			child := childRegex.derivative(str)
+			//fmt.Println("DER OF ALT CHILD IS:", child)
+			children1 = append(children1, child)
+		}
+		children1 = simplifyAlt(children1)
+		for i := range children1 {
+			if children1[i].Value == "" /*|| children1[i].Value == "ε"*/ {
+				continue
+			} else {
+				der.Value += children1[i].Value + "|"
+			}
+		}
+		der.Value = deleteExtraAlt(der.Value)
+		if len(notNullNotEmpty(children1)) > 1 {
+			der.Value = "(" + der.Value[:] + ")"
+		}
+		//fmt.Println("Alt derivative:", der.Value)
+		der = Node{der.Value, children1, "Alt"}
+	} else if regex.Label == "Concat" {
+		//fmt.Println("CONC input regex is; need to be checked:", regex)
+		correctRegex := regexParse(regex.Value)
+		//fmt.Println("correct regex:", correctRegex.Value)
+		//fmt.Println("childred of correwct regex:", correctRegex.Children)
+		//fmt.Println("label of correct regex should be same:", correctRegex.Label)
+		//fmt.Println(regex.Children)
+		correctRegex.Children = notNullNotEmpty(correctRegex.Children)
+		//fmt.Print("CONC not empty children: ")
+		//fmt.Println(correctRegex.Children)
+		if len(correctRegex.Children) == 1 {
+			//fmt.Println("SINGLE child")
+			phi := correctRegex.Children[0]
+			phi = regexParse(phi.Value)
+			//fmt.Println("Single child is:", phi)
+			phiDer := phi.derivative(str)
+			//fmt.Println("der of child is :", phiDer)
+			der = Node{phiDer.Value, phiDer.Children, phiDer.Label}
+		} else if len(correctRegex.Children) != 0 {
+			//fmt.Print("Concat of >1 children; Children are :")
+			//for _, c := range correctRegex.Children {
+			//	fmt.Print(c.Value, ", ")
+			//}
+			//fmt.Println()
+			phi, psi := correctRegex.Children[0], simplifyConcat(correctRegex.Children[1:])
+			//fmt.Println("Left and Right parts of concatination:", phi.Value, psi.Value)
+			//fmt.Println("FIND DERIVATIVE OF left part of concat - der phi + psi")
+			//phiRegex := regexParse(phi.Value)
+			phiDer := phi.derivative(str)
+			//fmt.Println("Phi derivative:", phiDer.Value)
+			//leftAlt := make([]Node, 0)
+			var leftAlt Node
+			if phiDer.Value == "ε" {
+				leftAlt = psi
+			} else if phiDer.Value == "" {
+				leftAlt = Node{"", nil, "Null"}
+			} else {
+				children := make([]Node, 0)
+				children = append(children, phiDer)
+				children = append(children, psi)
+				leftAlt = Node{phiDer.Value + psi.Value, children, "Concat"}
+			}
+			//fmt.Println("LEFT alt of concat derivative is:", leftAlt.Value)
+			if leftAlt.Value != "" {
+				children1 = append(children1, leftAlt)
+				//der.Value += leftAlt.Value
+			}
+			var rightAlt Node
+			//fmt.Println("FIND DERIVATIVE OF right part of concat - lambda phi + der psi")
+			phiLambda := phi.lambda()
+			//fmt.Println("Lambda of Phi", phiLambda)
+			if phiLambda.Value != "" { // lambda().Value = "" or "ε" <- definition; "ε" is concatenated => rightAlt is psiDer; "" => rightAlt is ""
+				//fmt.Println("HERE WHAT")
+				psiRegex := regexParse(psi.Value)
+				psiDer := psiRegex.derivative(str)
+				children := make([]Node, 0)
+				//children = append(children, phiLambda)
+				children = append(children, psiDer)
+				rightAlt = Node{psiDer.Value, children, "Concat"}
+				//rightAlt = Node{"(" + phiLambda.Value + psiDer.Value + ")", children, "Concat"}
+				//fmt.Println("RIGHT alt of concat derivative is:", rightAlt.Value)
+				if rightAlt.Value != "" {
+					if leftAlt.Value != "" {
+						leftAlt.Value = "(" + leftAlt.Value + ")" + "|"
+						children1[0] = leftAlt
+						//der.Value += leftAlt.Value
+						//der.Value += "|"
+					}
+					children1 = append(children1, rightAlt)
+					//der.Value += rightAlt.Value
+				}
+			}
+			for _, c := range children1 {
+				der.Value += c.Value
+			}
+			//fmt.Println("RIGHT alt of concat derivative is:", rightAlt.Value)
+			der = Node{der.Value, children1, "Alt"}
+		}
+	} else if regex.Label == "Star" {
+		//fmt.Println("STAR")
+		childRegex := regexParse(regex.Children[0].Value)
+		children1 = append(children1, childRegex.derivative(str))
+		for i := 1; i < len(regex.Children); i++ {
+			children1 = append(children1, regex.Children[i])
+		}
+		//fmt.Println("children of Star node:")
+		//for _, c := range children1 {
+		//	fmt.Print(c.Value, ", ")
+		//}
+		//fmt.Println()
+		if children1[0].Value != "" {
+			if children1[0].Value == "ε" { //derivative(a*) = εa* => remove ε from concat
+				//fmt.Println("производная = конкатенация с ε, значит значение это сама ()*")
+				//fmt.Println("производаня от ()*:", regex.Value)
+				der = Node{regex.Value, children1, "Star"}
+			} else {
+				der.Value = children1[0].Value + regex.Value
+				//fmt.Println("производная не пустая, значение = конкатенация производной и ()*: ", der.Value)
+				der = Node{der.Value, children1, "Concat"}
+			}
+		} else {
+			//fmt.Println("производная от ()* дала пустое множество")
+			der = Node{"", children1, "Null"}
+		}
+	} else if regex.Label == "Sym" {
+		if regex.Value == str {
+			//fmt.Println("производная по s от s = ε")
+			der = Node{"ε", nil, "Empty"}
+		} else {
+			//fmt.Println("производная по s от НЕ s = '' ")
+			der = Node{"", nil, "Null"}
+		}
+	} else if regex.Label == "Empty" {
+		//fmt.Println("производная по s от '' = '' ")
+		der = Node{"", nil, "Null"}
+	}
+	return der
+}
+
+func simplifyConcat(nodes []Node) Node {
+	nodeVal := ""
+	nodeChildren := make([]Node, 0)
+	for _, n := range nodes {
+		nodeVal += n.Value
+		nodeChildren = append(nodeChildren, n)
+	}
+	return Node{nodeVal, nodeChildren, "Concat"}
+}
+
+func simplifyAlt(children []Node) []Node {
+	unique := make(map[string]bool, len(children))
+	nodeChildren := make([]Node, 0)
+	for _, n := range children {
+		if !unique[n.Value] {
+			nodeChildren = append(nodeChildren, n)
+			unique[n.Value] = true
+		}
+	}
+	return nodeChildren
 }
 
 func main() {
@@ -250,201 +557,288 @@ func main() {
 	if ok != nil {
 		log.Fatalf("Error with closing file: %s", ok)
 	}
-	//fmt.Println("TEST:", regex)
-	//start := regexParse(regex)
+	fmt.Println("regex:", regex)
+	start := regexParse(regex)
 	//fmt.Println("TEST children:", start.Children)
 	//fmt.Println("value:", start.Value)
-	//printGraph(start)
-	//brzozovskiAutomat(start)
-	fmt.Println("=====tests for derivative()=====")
-
-	tests := []string{
-		"a",
-		"", //это 'ε' в понимании парсера
-		"a*",
-		"ab",
-		"bb",
-		"bbb",
-		"abc",
-		"a|b",
-		"a||d",
-		"a|b|c",
-		"(bab)*",
-		"(aa)*|(aaa)*",
-		"(bb|ab|(aaa)*)*",
-		"(aba)*|(a(baa)*ba)",
-	}
-	for _, t := range tests {
-		fmt.Println("------------------")
-		if t == "" {
-			fmt.Println("''")
-		} else {
-			fmt.Println(t)
-		}
-		r := regexParse(t)
-		alp := getAlphabetForRegex(r.Value)
-		fmt.Println("alphabet of regex:", alp)
-		fmt.Println("parsed regex is:", r.Value)
-		//fmt.Println("label of parsed regex:", r.Label)
-		for _, s := range alp {
-			fmt.Println("derivatives with respect to", s)
-			res := simplifyDerivative(r.derivative(s))
-			if res.Value == "" {
-				fmt.Printf("derivative(%s)= %s\n", r.Value, "''")
-			} else {
-				fmt.Printf("derivative(%s)= %s\n", r.Value, res.Value)
-			}
+	printGraph(start)
+	//fmt.Println("TEST alphabet derivatives for regex")
+	//alp := getAlphabetForRegex(start.Value)
+	//fmt.Println("alphabet of regex:", alp)
+	//fmt.Println("parsed regex is:", start.Value)
+	//fmt.Println("label of parsed regex:", start.Label)
+	//for _, s := range alp {
+	//	fmt.Println("derivative with respect to", s)
+	//	res := start.derivative(s)
+	//	if res.Value == "" {
+	//		fmt.Printf("derivative(%s)= %s\n", start.Value, "''")
+	//	} else {
+	//		fmt.Printf("derivative(%s)= %s\n", start.Value, res.Value)
+	//	}
+	//}
+	//fmt.Println()
+	automata := brzozowskiAutomata(start)
+	printAutomata(automata)
+	fmt.Println("States of R auto:", automata.Nodes)
+	res := make([]string, 0)
+	for _, s := range automata.Nodes {
+		s = reverse(s)
+		rsi := regexParse(s)
+		qij := brzozowskiAutomata(rsi).Nodes
+		fmt.Println("States of Sr auto:", qij)
+		for _, q := range qij {
+			res = append(res, reverse(q))
 		}
 	}
-}
-
-func getAlphabetForRegex(t string) []string {
-	alp := make([]string, 0)
-	for i := range t {
-		if unicode.IsLetter(rune(t[i])) && t[i] != 206 && !slices.Contains(alp, string(t[i])) { //'ε' = 206
-			alp = append(alp, string(t[i]))
-		}
-	}
-	return alp
-}
-
-//Определим вспомогательную функцию lambda , такую, что
-//если аргумент принимает ε, то она возвращает ε, иначе – ""
-//(где "" - пустое множество, т.е. противоречие)
-
-func (regex Node) lambda() Node {
-	children1 := make([]Node, 0)
-	var der Node
-	der.Value = ""
-	if regex.Label == "Alt" {
-		for i := range regex.Children {
-			children1 = append(children1, regex.Children[i].lambda())
-		}
-		for i := range children1 {
-			if children1[i].Value == "" {
-				continue
-			} else {
-				der.Value += children1[i].Value + "|"
-			}
-		}
-		der = Node{deleteExtraAlt(der.Value), children1, "Alt"}
-	} else if regex.Label == "Concat" {
-		for i := range regex.Children {
-			children1 = append(children1, regex.Children[i].lambda())
-		}
-		for i := range children1 {
-			der.Value += children1[i].Value
-		}
-		der = Node{der.Value, children1, "Concat"}
-	} else if regex.Label == "Star" {
-		der = Node{"ε", nil, "Empty"}
-	} else if regex.Label == "Sym" {
-		der = Node{"", nil, "Null"}
-	} else if regex.Label == "Empty" {
-		der = Node{"ε", nil, "Empty"}
-	}
-	return der
-}
-
-/* использует вспом. функцию lambda()*/
-func (regex Node) derivative(str string) Node {
-	children1 := make([]Node, 0)
-	var der Node
-	if regex.Label == "Alt" {
-		children1 = make([]Node, 0)
-		for i := range regex.Children {
-			children1 = append(children1, regex.Children[i].derivative(str))
-		}
-		for i := range children1 {
-			if children1[i].Value == "" {
-				continue
-			} else {
-				der.Value += children1[i].Value + "|"
-			}
-		}
-		der.Value = deleteExtraAlt(der.Value)
-		if len(notNull(children1)) > 1 {
-			der.Value = "(" + der.Value[:] + ")"
-		}
-		der = Node{der.Value, children1, "Alt"}
-	} else if regex.Label == "Concat" {
-		phi, psi := regex.Children[0], regex.Children[1:]
-		phiDer := phi.derivative(str)
-		leftAlt := make([]Node, 0)
-		if phiDer.Value == "ε" {
-			leftAlt = psi
-		} else if phiDer.Value == "" {
-			leftAlt = nil
-		}
-		if leftAlt != nil {
-			children1 = append(children1, leftAlt...)
-		}
-		rightAlt := make([]Node, 0)
-		if phi.lambda().Value != "" { // lambda().Value = "" or "ε" <- definition; "ε" is concatenated; "" => rightAlt is ""
-			rightAlt = append(rightAlt, Node{regex.Value[1:], psi, "Concat"}.derivative(str))
-		}
-		children1 = append(children1, rightAlt...)
-		for i := range children1 {
-			der.Value += children1[i].Value
-		}
-		der = Node{der.Value, children1, "Alt"}
-	} else if regex.Label == "Star" {
-		children1 = append(children1, regex.Children[0].derivative(str))
-		for i := 1; i < len(regex.Children); i++ {
-			children1 = append(children1, regex.Children[i])
-		}
-		if children1[0].Value != "" {
-			der.Value = children1[0].Value + regex.Value
-		} else {
-			der.Value = ""
-		}
-		der = Node{der.Value, children1, "Concat"}
-	} else if regex.Label == "Sym" {
-		if regex.Value == str {
-			der = Node{"ε", nil, "Empty"}
-		} else {
-			der = Node{"", nil, "Null"}
-		}
-	} else if regex.Label == "Empty" {
-		der = Node{"", nil, "Null"}
-	}
-	return der
-}
-
-func notNull(arr []Node) []Node {
-	upd := make([]Node, 0)
-	for i := range arr {
-		if arr[i].Value == "" {
+	unique := make(map[string]bool, len(res))
+	result := make([]string, 0)
+	for _, r := range res {
+		if r == "" || r == "ε" {
 			continue
-		} else {
-			upd = append(upd, arr[i])
+		}
+		if !unique[r] {
+			result = append(result, r)
+			unique[r] = true
 		}
 	}
-	return upd
+	fmt.Println("REGEX INFIXES:")
+	sort.Sort(sort.StringSlice(result))
+	for _, r := range result {
+		fmt.Printf("\t%s\n", r)
+	}
+
+	//fmt.Println("\n\n\ntest derivative func")
+	//str := "ba(aba)*|(baa)*ba"
+	//str = "(baa)*ba"
+	//str = "(ab)*"
+	//str = "a(aba)*|(aa(baa)*ba)|a"
+	//str = "((aba)*|a(baa)*ba|ε)"
+	//str = "(ab)*b(a(a(ab)*)b)*"  //der by b
+	//str = "b(ab)*b(a(a(ab)*)b)*" //der by b
+	//str = "(bb|ab|(aaa)*)*"
+	//str = "(b|aa(aaa)*)(bb|ab|(aaa)*)*"
+	//str = "a(aaa)*(bb|ab|(aaa)*)*"                                //der by a
+	//str = "(aaa)*(bb|ab|(aaa)*)*"                                 //der by a
+	//str = "(aa(aaa)*(bb|ab|(aaa)*)*)|(b|aa(aaa)*)(bb|ab|(aaa)*)*" //der by b
+	//str = "b(bb|ab|(aaa)*)*"
+	//node := regexParse(str)
+	//fmt.Println("node:", node)
+	//fmt.Println("\tStart Derivative process")
+	//der := node.derivative("a")
+	//fmt.Println(der)
+	//fmt.Println(der.Value)
+	//fmt.Println()
+	//der = node.derivative("b")
+	//fmt.Println(der)
+	//fmt.Println(der.Value)
+
+	//fmt.Println("\n\ntest reverse func")
+	//str := "(baa)*ba"
+	//str = "a(aba)*|(aa(baa)*ba)|a"
+	//str = "(aa(aaa)*(bb|ab|(aaa)*)*)|(b|aa(aaa)*)(bb|ab|(aaa)*)*"
+	//str = "b(bb|ab|(aaa)*)*"
+	//str = "a|b|b|ab|b*|(((ab(a(|ab*|)b))*)*)*|c"
+	//str = "((|a(b)*c|b)*|(ba)*)*"
+	//fmt.Println("str is:", str)
+	//r := reverse(str)
+	//fmt.Println("reversed str is:", r)
+	//fmt.Println("list of subs of str:", getListOfAltSubstrings(str), len(getListOfAltSubstrings(str)))
+	//fmt.Println("list of subs of rev:", getListOfAltSubstrings(r), len(getListOfAltSubstrings(r)))
+	//parsed := regexParse(r)
+	//fmt.Println("parsed:", parsed.Value)
+	//fmt.Println("children of parsed:")
+	//for _, c := range parsed.Children {
+	//	fmt.Print(c.Value, ", ")
+	//}
 }
 
-func simplifyDerivative(regex Node) Node {
-	var der Node
-	if regex.Label == "Concat" {
-		v := strings.ReplaceAll(regex.Value, "ε", "")
-		n := len(v)
-		if n > 0 {
-			if v[n-1] == '*' {
-				der = Node{v, nil, "Star"}
+func reverse(nod string) string {
+	node := regexParse(nod)
+	rev := ""
+	var revChild string
+	revCh := make([]string, 0)
+	if node.Label == "Alt" {
+		//fmt.Println("\talt")
+		ch := node.Children
+		//fmt.Println("alt ch:", ch)
+		for _, c := range ch {
+			//fmt.Println("child:", c.Value)
+			if c.Label == "Alt" {
+				revChild = "(" + reverse(c.Value) + ")"
+				//fmt.Println("revChild:", revChild)
+			} else {
+				revChild = reverse(c.Value)
+				//fmt.Println("revChild:", revChild)
+			}
+			revCh = append(revCh, revChild)
+		}
+		//fmt.Println("reversed children:", revCh)
+		for j, s := range revCh {
+			if j == len(revCh)-1 {
+				rev += s
+			} else {
+				rev += s
+				rev += "|"
 			}
 		}
-	} else {
-		der = regex
+		//fmt.Println("reversed alt:", rev)
+	} else if node.Label == "Concat" {
+		//fmt.Println("\tconcat")
+		ch := node.Children
+		//fmt.Println("concat ch:", ch)
+		for i := len(ch) - 1; i >= 0; i-- {
+			//fmt.Println("child:", ch[i].Value)
+			if ch[i].Label == "Alt" {
+				revChild = "(" + reverse(ch[i].Value) + ")"
+				//fmt.Println("revChild:", revChild)
+			} else {
+				revChild = reverse(ch[i].Value)
+				//fmt.Println("revChild:", revChild)
+			}
+			revCh = append(revCh, revChild)
+		}
+		//fmt.Println("reversed children:", revCh)
+		for _, s := range revCh {
+			rev += s
+		}
+		//fmt.Println("reversed concat:", rev)
+	} else if node.Label == "Star" {
+		//fmt.Println("\tstar")
+		ch := node.Children
+		//fmt.Println("star ch:", ch)
+		for _, c := range ch {
+			//fmt.Println("child:", c.Value)
+			revCh = append(revCh, reverse(c.Value))
+		}
+		rev = "("
+		for _, s := range revCh {
+			rev += s
+		}
+		rev += ")*"
+		//fmt.Println("reversed star:", rev)
+	} else if node.Label == "Sym" {
+		if node.Value != "" {
+			rev = node.Value
+		}
+		//fmt.Println("reversed sym:", rev)
+	} else if node.Label == "Empty" {
+		rev = "ε"
+		//fmt.Println("reversed empty:", rev)
+	} else if node.Label == "Null" {
+		rev = ""
+		//fmt.Println("reversed '':", rev)
 	}
-	return der
+	return rev
 }
 
-func deleteExtraAlt(str string) string {
-	n := len(str)
-	if n > 0 {
-		if string(str[n-1]) == "|" {
-			str = str[:n-1]
+func brzozowskiAutomata(start Node) BrzozovskiAuto {
+	//var fa BrzozovskiAuto
+	fa := BrzozovskiAuto{
+		start.Value,
+		getAlphabetForRegex(start.Value),
+		[]string{start.Value},
+		make([]Edge, 0),
+	}
+	//fmt.Println("alphabet of regex:", fa.Alphabet)
+	//fmt.Println("parsed regex is:", start.Value)
+	//fmt.Println("label of parsed regex:", start.Label)
+	condition := func(a BrzozovskiAuto) (bool, BrzozovskiAuto) {
+		//fmt.Print("\nstates of fa: ")
+		//for _, c := range a.Nodes {
+		//	fmt.Print(c, " ")
+		//}
+		oldStates := a.Nodes
+		//fmt.Print("\nOLDSTATES: ")
+		//for _, c := range oldStates {
+		//	fmt.Print(c, " ")
+		//}
+		for _, w := range a.Alphabet {
+			a.Nodes, a.Edges = addStateDerivative(a, w)
+			a = BrzozovskiAuto{a.Regex, a.Alphabet, a.Nodes, a.Edges}
+			//fmt.Print("\nHERE states: ")
+			//fmt.Print("{")
+			//for _, c := range a.Nodes {
+			//	fmt.Print(c, ", ")
+			//}
+			//fmt.Println("}")
+		}
+		newStatesLength := len(a.Nodes)
+		//fmt.Println("lengths:", len(oldStates), newStatesLength)
+		return newStatesLength > len(oldStates), a
+	}
+	c, a := condition(fa)
+	for c {
+		//fmt.Println("ПОКА НЕ ПОСТРОИЛИ")
+		fa = a
+		c, a = condition(fa)
+	}
+	return a
+}
+
+//func condition(a BrzozovskiAuto) (bool, BrzozovskiAuto) {
+//	//fmt.Print("\nstates of fa: ")
+//	//for _, c := range a.Nodes {
+//	//	fmt.Print(c, " ")
+//	//}
+//	oldStates := a.Nodes
+//	//fmt.Print("\nOLDSTATES: ")
+//	//for _, c := range oldStates {
+//	//	fmt.Print(c, " ")
+//	//}
+//	for _, w := range a.Alphabet {
+//		a.Nodes, a.Edges = addStateDerivative(a, w)
+//		a = BrzozovskiAuto{a.Regex, a.Alphabet, a.Nodes, a.Edges}
+//		//fmt.Print("\nHERE states: ")
+//		//fmt.Print("{")
+//		//for _, c := range a.Nodes {
+//		//	fmt.Print(c, ", ")
+//		//}
+//		//fmt.Println("}")
+//	}
+//	newStatesLength := len(a.Nodes)
+//	//fmt.Println("lengths:", len(oldStates), newStatesLength)
+//	return newStatesLength > len(oldStates), a
+//}
+
+func addStateDerivative(a BrzozovskiAuto, w string) ([]string, []Edge) {
+	nodesCopy := a.Nodes
+	for _, r := range nodesCopy {
+		//fmt.Println("\nwhat state regex is derivated?:", r)
+		n := regexParse(r)
+		//fmt.Println(n)
+		node := n.derivative(w)
+		//fmt.Println(node)
+		//fmt.Println("node:", node.Value)
+		//fmt.Printf("==\nder is: %s for str '%s'", node.Value, w)
+		if node.Value == "" {
+			continue
+		}
+		node.Value = removeExtraParenthesis(node.Value)
+
+		//fmt.Print("\nBEFORE DUPS: ")
+		//for _, c := range a.Nodes {
+		//	fmt.Print(c, " ")
+		//}
+		if !areNodesDuplicates(node.Value, a.Nodes) {
+			//fmt.Println("dups")
+			//fmt.Println("i am going to add node")
+			a.Nodes = append(a.Nodes, node.Value)
+			//fmt.Print("added: ")
+			//for _, c := range a.Nodes {
+			//	fmt.Print(c, ", ")
+			//}
+			a.Edges = append(a.Edges, Edge{r, node.Value, w})
+			//fmt.Print("\nEDGES ARE: ")
+			//for _, c := range a.Edges {
+			//	fmt.Println("\t", c.Parent, "--", c.EdgeLabel, "->", c.Child)
+			//}
+		} else {
+			if !areEdgesDuplicates(Edge{r, node.Value, w}, a.Edges) {
+				a.Edges = append(a.Edges, Edge{r, node.Value, w})
+			}
 		}
 	}
-	return str
+	return a.Nodes, a.Edges
 }
+
+/* то, как я сама себе все усложнила это уже своего рода анекдот */
