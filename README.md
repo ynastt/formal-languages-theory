@@ -1,5 +1,5 @@
 # formal-languages-theory
-TFL course in bmstu
+TFL course in bmstu iu9
 
 ### lab1 - bisimulation (task 1mod3)
 Implemention the simplification algorithm renaming the terms rewriting systems.
