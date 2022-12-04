@@ -4,6 +4,7 @@
         "vector": "cpp",
         "ostream": "cpp",
         "iostream": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "xiosbase": "cpp"
     }
 }
