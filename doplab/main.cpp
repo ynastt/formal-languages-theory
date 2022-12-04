@@ -199,23 +199,16 @@ int input(int n){
 void printTerms() {
     sort(nonTerms.begin(), nonTerms.end());
     auto last = unique(nonTerms.begin(), nonTerms.end());
-    /*for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
-    cout << endl;
-    cout << "gran:" << last - nonTerms.begin() << endl;*/
     nonTerms.erase(last, nonTerms.end());
     cout << "NTERMS: ";
     for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
     cout << endl;
-    sort(terms.begin(), terms.end());
-    auto lastUniqueTerm = unique(terms.begin(), terms.end());
-    /*for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
-    cout << endl;
-    cout << "gran:" << lastUniqueTerm - terms.begin() << endl;*/
-    terms.erase(lastUniqueTerm, terms.end());
-    cout << "TERMS: ";
-    for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
-    cout << endl;
-    cout << endl;
+    // sort(terms.begin(), terms.end());
+    // auto lastUniqueTerm = unique(terms.begin(), terms.end());
+    // terms.erase(lastUniqueTerm, terms.end());
+    // cout << "TERMS: ";
+    // for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
+    // cout << endl;
 }
 
 void printGrammar() {
@@ -303,18 +296,18 @@ void updateGrammar() {
 void removeNonGeneratingNterms() {
     int setSize = 0;
     int r = 0;
-    cout << "grammar size:" << grammar.size() << endl;
-    cout << "==ШАГ 1==" <<endl;
+    //cout << "grammar size:" << grammar.size() << endl;
+    //cout << "==ШАГ 1==" <<endl;
     while (r < grammar.size()) {
         string nterm = grammar[r].left;
         vector<rightPart> rights = grammar[r].right;
-        cout << "NTERM: " << nterm << endl;
-        cout << "RIGHTPART: ";
-        for (int j = 0;  j < rights.size(); j++) {
-            cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
-            if (j != rights.size() - 1) cout << ", ";   
-        }
-        cout << endl;
+        //cout << "NTERM: " << nterm << endl;
+        //cout << "RIGHTPART: ";
+        // for (int j = 0;  j < rights.size(); j++) {
+        //     cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
+        //     if (j != rights.size() - 1) cout << ", ";   
+        // }
+        // cout << endl;
         // шаг 1 находим правила не содерж нетерминалов в правой части
         if (FirstIndexNterminRightPart(rights) != -1)  {
             r++;
@@ -333,7 +326,8 @@ void removeNonGeneratingNterms() {
     // cout << endl;
     // cout << "===" << endl; 
     // cout << endl;
-    cout << "==ШАГ 2==" <<endl;
+    // cout << "==ШАГ 2==" <<endl;
+
     // шаг 2 если найдено правило, все нетерминалы правой части которого уже
     // входят в множество, то добавляем левый нетерминал 
     // если множество порождающих нетерминалов изменилось, повторяем шаг 2
@@ -343,13 +337,13 @@ void removeNonGeneratingNterms() {
         while (r < grammar.size()) {   
             string nterm = grammar[r].left;
             vector<rightPart> rights = grammar[r].right; 
-            cout << "NTERM: " << nterm << endl;
-            cout << "RIGHTPART: ";
-            for (int j = 0;  j < rights.size(); j++) {
-                cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
-                if (j != rights.size() - 1) cout << ", ";   
-            }
-            cout << endl;
+            // cout << "NTERM: " << nterm << endl;
+            // cout << "RIGHTPART: ";
+            // for (int j = 0;  j < rights.size(); j++) {
+            //     cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
+            //     if (j != rights.size() - 1) cout << ", ";   
+            // }
+            // cout << endl;
             int col = getQuantityOfNterms(rights);
             int k = 0;
             //cout << "количество нетерминалов в правой части: " << col << endl;
@@ -404,17 +398,17 @@ void removeUnreachableNterms() {
     reachNterms.push_back("S"); 
     int setSize = 0;
     int r = 0;
-    cout << "grammar size:" << grammar.size() << endl;
+    //cout << "grammar size:" << grammar.size() << endl;
     while (reachNterms.size() > setSize) {
         setSize = reachNterms.size();
         while (r < grammar.size()) {
             string nterm = grammar[r].left;
             vector<rightPart> rights = grammar[r].right;
-            cout << "NTERM: " << nterm << endl;
-            cout << "RIGHTPART: ";
+            //cout << "NTERM: " << nterm << endl;
+            //cout << "RIGHTPART: ";
             // добавляем нетерминалы достижимые из данного
             for (int j = 0;  j < rights.size(); j++) {
-                cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}" << endl;
+                //cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}" << endl;
                 if (rights[j].type == 1) {
                     if (!isInReachNterms(rights[j].val, reachNterms) && rights[j].val != "S") {
                         reachNterms.push_back(rights[j].val);
@@ -434,13 +428,13 @@ void removeUnreachableNterms() {
             r++;     
         }
     }
-    cout << "===" << endl;   
-    for (auto n: reachNterms) {
-        cout << n << " ";
-    }
-    cout << endl;
-    cout << "===" << endl; 
-    cout << endl;
+    // cout << "===" << endl;   
+    // for (auto n: reachNterms) {
+    //     cout << n << " ";
+    // }
+    // cout << endl;
+    // cout << "===" << endl; 
+    // cout << endl;
     nonTerms = reachNterms; 
 }
 
@@ -453,18 +447,18 @@ int main() {
         cout << "INCORRECT TEST FILE!";
         return 0;
     }
-    printGrammar();
+    cout << "> Parsed grammar <" << endl;
     printTerms();
+    printGrammar();
     //убираем непорождающие нетерминалы
     removeNonGeneratingNterms();
-    cout << "Grammar with removed non-generating nonterminals:" << endl;
+    cout << "> Grammar with removed non-generating nonterminals <" << endl;
     printTerms();
     updateGrammar();
     printGrammar();
     //убираем недостижимые нетерминалы
-    cout << "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" << endl;
     removeUnreachableNterms();
-    cout << "Grammar with removed unreachable nonterminals:" << endl;
+    cout << "> Grammar with removed unreachable nonterminals <" << endl;
     printTerms();
     printGrammar();
     return 0;
