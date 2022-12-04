@@ -9,6 +9,7 @@ using namespace std;
 
 vector<string> nonTerms;
 vector<string> terms;
+vector<string> genNterms;
 
 struct rightPart {
     int type; //1 - nterm, 2 - term
@@ -194,28 +195,7 @@ int input(int n){
         return true;
 }
 
-int main(){
-    int n;
-    cout << "Enter test number" << endl;
-    cin >> n;
-    bool err = input(n);
-    if (!err) {
-        cout << "INCORRECT TEST FILE!";
-        return 0;
-    }
-    for (int i = 0; i < grammar.size(); i++) {
-        Rule r = grammar[i];
-        cout << "-----------" << endl;
-        cout << "RULE " << i + 1 << endl;
-        cout << "left: " << r.left << ", ";
-        cout << "right: ";
-        for (int i = 0;  i < r.right.size(); i++) {
-            cout << "{type:" << r.right[i].type << ", val:" << r.right[i].val << "}";
-            if (i != r.right.size() - 1) cout << ", ";   
-        }
-        cout << endl;
-    }
-    cout << endl;
+void printTerms() {
     sort(nonTerms.begin(), nonTerms.end());
     auto last = unique(nonTerms.begin(), nonTerms.end());
     /*for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
@@ -233,7 +213,211 @@ int main(){
     terms.erase(lastUniqueTerm, terms.end());
     cout << "TERMS: ";
     for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
-    return 0;
+    cout << endl;
+    cout << endl;
 }
+
+void printGrammar() {
+    for (int i = 0; i < grammar.size(); i++) {
+        Rule r = grammar[i];
+        cout << "-----------" << endl;
+        cout << "RULE " << i + 1 << endl;
+        cout << "left: " << r.left << ", ";
+        cout << "right: ";
+        for (int j = 0;  j < r.right.size(); j++) {
+            cout << "{type:" << r.right[j].type << ", val:" << r.right[j].val << "}";
+            if (j != r.right.size() - 1) cout << ", ";   
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+// если есть нетерминал в правой части, то вернет его "индекс", иначе -1
+int FirstIndexNterminRightPart(vector<rightPart> rights) {
+    for(int i = 0; i < rights.size(); i++) {
+        if (rights[i].type == 1) return i;
+    }
+    return -1;
+}
+
+// принадлежит ли нетерминал множеству порождающих нетерминалов
+bool isInGenNterms(string nterm, vector<string> gen) {
+    for (auto el : gen) {
+        if (el == nterm) return true;
+    }
+    // if (binary_search(gen.begin(), gen.end(), nterm)) {
+    //     return true;
+    // }
+    return false;
+}
+
+// количество нетерминалов в правой части правила
+int getQuantityOfNterms(vector<rightPart> rights) {
+    int s = 0;
+    for(int i = 0; i < rights.size(); i++) {
+        if (rights[i].type == 1) s++;
+    }
+    return s;
+}
+
+void updateGrammar1() {
+    int len = grammar.size();
+    for (int i = 0; i < len; i++) {
+        Rule r = grammar[i];
+        //cout << "left: " << r.left << endl;
+        if (!isInGenNterms(r.left, nonTerms)) {
+           // cout << "it is not gen" << endl;
+            grammar.erase(grammar.begin() + i);
+            len = grammar.size();
+            //cout << "grammar len: " << len << endl;
+            i --;
+            //printGrammar();
+        } else {
+            for (int j = 0;  j < r.right.size(); j++) {
+                //cout << "{type:" << r.right[j].type << ", val:" << r.right[j].val << "}" << endl;;
+                if (!isInGenNterms(r.right[j].val, nonTerms) && r.right[j].type == 1) {
+                    //cout << "it is not gen" << endl;
+                    grammar.erase(grammar.begin() + i);
+                    len = grammar.size();
+                    //cout << "grammar len: " << len << endl;
+                    i--;
+                    //printGrammar();
+                }
+                if (r.right[j].type == 2) {
+                    continue;
+                }
+            }
+        }        
+    }
+}
+
+void removeNonGeneratingNterms() {
+    int setSize = 0;
+    int r = 0;
+    cout << "grammar size:" << grammar.size() << endl;
+    cout << "==ШАГ 1==" <<endl;
+    while (r < grammar.size()) {
+        string nterm = grammar[r].left;
+        vector<rightPart> rights = grammar[r].right;
+        cout << "NTERM: " << nterm << endl;
+        cout << "RIGHTPART: ";
+        for (int j = 0;  j < rights.size(); j++) {
+            cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
+            if (j != rights.size() - 1) cout << ", ";   
+        }
+        cout << endl;
+        // шаг 1 находим правила не содерж нетерминалов в правой части
+        if (FirstIndexNterminRightPart(rights) != -1)  {
+            r++;
+        } else {
+            //cout << "не содержит нетерминалов в правой части" << endl;
+            if (!isInGenNterms(nterm, genNterms) && nterm != "") {
+                genNterms.push_back(nterm);
+            }
+            r++;
+        }      
+    }
+    // cout << "===" << endl;   
+    // for (auto n: genNterms) {
+    //     cout << n << " ";
+    // }
+    // cout << endl;
+    // cout << "===" << endl; 
+    // cout << endl;
+    cout << "==ШАГ 2==" <<endl;
+    // шаг 2 если найдено правило, все нетерминалы правой части которого уже
+    // входят в множество, то добавляем левый нетерминал 
+    // если множество порождающих нетерминалов изменилось, повторяем шаг 2
+    while (genNterms.size() > setSize) {
+        r = 0;
+        setSize = genNterms.size();
+        while (r < grammar.size()) {   
+            string nterm = grammar[r].left;
+            vector<rightPart> rights = grammar[r].right; 
+            cout << "NTERM: " << nterm << endl;
+            cout << "RIGHTPART: ";
+            for (int j = 0;  j < rights.size(); j++) {
+                cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
+                if (j != rights.size() - 1) cout << ", ";   
+            }
+            cout << endl;
+            int col = getQuantityOfNterms(rights);
+            int k = 0;
+            //cout << "количество нетерминалов в правой части: " << col << endl;
+            for (int j = 0;  j < rights.size(); j++) {
+                if (col == 0) {
+                    //cout << "ZERO NTERMS AT RIGHT" << endl;
+                    r++;
+                }
+                if (col > 0) {    
+                    string cur = rights[j].val;
+                    //cout << "поиск " << cur << endl;
+                    if (isInGenNterms(cur,  genNterms)) {
+                        k++;
+                        //cout << "нетерминал уже есть в множестве порождающих k="<< k << endl;
+                        if (k == col) {
+                            //cout << "!правило где все нетерминалы справа в множестве порождающих!" << endl;
+                            if (!isInGenNterms(nterm, genNterms)) {
+                                genNterms.push_back(nterm);
+                                //cout << "size of gen nterms: " << genNterms.size() << endl;
+                                // cout << "===" << endl;   
+                                // for (auto n: genNterms) {
+                                //     cout << n << " ";
+                                // }
+                                // cout << endl;
+                                // cout << "===" << endl; 
+                                // cout << endl;
+                            }
+                            r++;
+                        }
+                    } else {
+                        if (binary_search(nonTerms.begin(), nonTerms.end(), cur)) {
+                            //cout << "не принадлежит порождающим, следующее правило" << endl;
+                            r++;
+                        }
+                    }
+                }
+                
+            }
+        }
+    }  
+    /*cout << "===" << endl;   
+    for (auto n: genNterms) {
+        cout << n << " ";
+    }
+    cout << endl;
+    cout << "===" << endl; */
+    cout << endl;
+    nonTerms = genNterms;   
+}
+
+void removeUnreachableNterms() {
+
+}
+
+int main() {
+    int n;
+    cout << "Enter test number" << endl;
+    cin >> n;
+    bool err = input(n);
+    if (!err) {
+        cout << "INCORRECT TEST FILE!";
+        return 0;
+    }
+    printGrammar();
+    printTerms();
+    //убираем непорождающие нетерминалы
+    removeNonGeneratingNterms();
+    cout << "Grammar with remover non-generating nonterminals:" << endl;
+    printTerms();
+    updateGrammar1();
+    printGrammar();
+    //убираем недостижимые нетерминалы
+    //removeUnreachableNterms();
+    return 0;
+
+}
+
 
 //анекдот: по мне (и моему коду) не скажешь, но в школе мне нравился с++
