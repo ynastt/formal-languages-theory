@@ -35,24 +35,24 @@ int getFirstAltIndex(string str) {
 }
 
 int getSecondAltIndex(string str) {
-    cout << endl;
-    cout << "----second alt ----" << endl;
-    cout << str << endl;
-    cout << str.length() << endl;
+    //cout << endl;
+    //cout << "----second alt ----" << endl;
+    //cout << str << endl;
+    //cout << str.length() << endl;
     int k = 0;
 	for (int i = 0; i < str.length(); i++) {
         if ( str[i] == '|'  && k == 1) {
-            cout << "found: " << i << endl;
-            cout << "---- ----" << endl;
+            //cout << "found: " << i << endl;
+            //cout << "---- ----" << endl;
 			return i;
         } 
         if ( str[i] == '|'  && k < 1) {
-            cout << i << endl;
+            //cout << i << endl;
 			k++;
         }       
 	}
-    cout << "there is no second alt" << endl;
-    cout << "---- ----" << endl;
+    //cout << "there is no second alt" << endl;
+    //cout << "---- ----" << endl;
     return -1;
 }
 
@@ -108,9 +108,7 @@ vector<rightPart> parseCon(string str) {
         if (s[0] == '[') {
             string n = str.substr(i+1, 1);
             //cout << "n: " << n << endl;
-            if (find(nonTerms.begin(), nonTerms.end(), n) != nonTerms.end()) {
-                nonTerms.push_back(n);
-            }    
+            nonTerms.push_back(n);  
             subs.push_back({1, n});
             i += 3;
         } else {
@@ -118,7 +116,7 @@ vector<rightPart> parseCon(string str) {
             if (str == "ε") {   // особенности заиписи этой буквы 
                 t = "";
             }
-            cout << "t: " << t << endl;
+            //cout << "t: " << t << endl;
             if ( t != "" ) {
                 terms.push_back(t);
             } 
@@ -132,7 +130,7 @@ vector<rightPart> parseCon(string str) {
 vector<Rule> parseRuleLine(string str) {
     vector<Rule> rules;
     string nt = str.substr(1,1);
-    //nonTerms.push_back(nt);
+    nonTerms.push_back(nt);
     string leftPartOfRule = str.substr(5);
     //cout << getFirstAltIndex(str.substr(5)) << endl;
     if (getFirstAltIndex(leftPartOfRule) == -1) {
@@ -151,11 +149,11 @@ vector<Rule> parseRuleLine(string str) {
             if (subs[i] == "") {
                 subs[i] = "ε";
             }
-            cout << subs[i] << endl;
+            //cout << subs[i] << endl;
         }
         //cout << "alt subs size again " << subs.size() << endl;
         for (int i = 0;  i < subs.size(); i++) {
-            cout << "i " << i << endl;
+            //cout << "i " << i << endl;
             //cout << "len of subs{i}: " << subs[i].length() << endl;
             vector<rightPart> s;
             s = parseCon(subs[i]);
@@ -217,10 +215,22 @@ int main(){
         }
         cout << endl;
     }
-    cout << "nterms and terms" << endl;
+    cout << endl;
+    sort(nonTerms.begin(), nonTerms.end());
+    auto last = unique(nonTerms.begin(), nonTerms.end());
+    /*for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
+    cout << endl;
+    cout << "gran:" << last - nonTerms.begin() << endl;*/
+    nonTerms.erase(last, nonTerms.end());
     cout << "NTERMS: ";
     for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
     cout << endl;
+    sort(terms.begin(), terms.end());
+    auto lastUniqueTerm = unique(terms.begin(), terms.end());
+    /*for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
+    cout << endl;
+    cout << "gran:" << lastUniqueTerm - terms.begin() << endl;*/
+    terms.erase(lastUniqueTerm, terms.end());
     cout << "TERMS: ";
     for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
     return 0;
