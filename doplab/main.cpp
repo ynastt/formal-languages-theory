@@ -4,11 +4,9 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <cctype>
 
 using namespace std;
 
-vector<string> string_rules;
 vector<string> nonTerms;
 vector<string> terms;
 
@@ -60,28 +58,28 @@ int getSecondAltIndex(string str) {
 
 vector<string> getListOfAltSubstrings(string str) {
     vector<string> s;
-    cout << "ALT SUBS" << endl;
+    //cout << "ALT SUBS" << endl;
     //cout << "string: "<< str << endl;
     int k = str.length();
-    cout << "k: "<< k << endl;
+    //cout << "k: "<< k << endl;
     int i = 0;
     while( i < k) {
         //cout << "i: "<< i << endl;
-        cout << "string: "<< str << endl;
+        //cout << "string: "<< str << endl;
         int alt = getFirstAltIndex(str);
-        cout << "alt index: "<< alt << endl;
+        //cout << "alt index: "<< alt << endl;
         if (alt == -1) {
             s.push_back(str);
             return s;
         } else {
             //cout << "second alt index: " << getSecondAltIndex(str) << endl;
             if (alt == k - 1 || getSecondAltIndex(str)- alt == 1) {
-                cout << "case last alt" << endl;
+                //cout << "case last alt" << endl;
                 s.push_back(str.substr(i, 1));
                 s.push_back("");
                 return s;
             } else {
-                cout << "alternative substring push" << endl;
+                //cout << "alternative substring push" << endl;
                 s.push_back(str.substr(0, alt));
                 str = str.substr(alt + 1);
                 k = str.length();
@@ -95,14 +93,14 @@ vector<string> getListOfAltSubstrings(string str) {
 
 vector<rightPart> parseCon(string str) {
     vector<rightPart> subs;
-    cout << "CON" << endl;
-    cout << "string: "<< str << endl;
+    //cout << "CON" << endl;
+    //cout << "string: "<< str << endl;
     int i = 0;
     int len = str.length();
     if (str == "ε") {   // особенности заиписи этой буквы "Îµ"
         len = 1;
     }
-    cout << "len: " << len << endl;
+    //cout << "len: " << len << endl;
     while (i < len) {
         //cout << "i: " << i << endl;
         string s = str.substr(i);
@@ -110,9 +108,9 @@ vector<rightPart> parseCon(string str) {
         if (s[0] == '[') {
             string n = str.substr(i+1, 1);
             //cout << "n: " << n << endl;
-            // if (find(nonTerms.begin(), nonTerms.end(), n) != nonTerms.end()) {
-            //     nonTerms.push_back(n);
-            // }    
+            if (find(nonTerms.begin(), nonTerms.end(), n) != nonTerms.end()) {
+                nonTerms.push_back(n);
+            }    
             subs.push_back({1, n});
             i += 3;
         } else {
@@ -121,9 +119,9 @@ vector<rightPart> parseCon(string str) {
                 t = "";
             }
             cout << "t: " << t << endl;
-            // if ( t != "" ) {
-            //     terms.push_back(t);
-            // } 
+            if ( t != "" ) {
+                terms.push_back(t);
+            } 
             subs.push_back({2, t});
             i++;
         }
@@ -138,7 +136,7 @@ vector<Rule> parseRuleLine(string str) {
     string leftPartOfRule = str.substr(5);
     //cout << getFirstAltIndex(str.substr(5)) << endl;
     if (getFirstAltIndex(leftPartOfRule) == -1) {
-        cout << "i am here" << endl;
+        //cout << "i am here" << endl;
         vector<rightPart> subs;
         subs = parseCon(leftPartOfRule);
         Rule r;
@@ -147,16 +145,15 @@ vector<Rule> parseRuleLine(string str) {
         rules.push_back(r);
     } else {
         vector<string> subs = getListOfAltSubstrings(leftPartOfRule);
-        cout << "alt subs" << endl;
-        cout << "alt subs len " << subs.size() << endl;
+        //cout << "alt subs" << endl;
+        //cout << "alt subs len " << subs.size() << endl;
         for (int i = 0;  i < subs.size(); i++) {
             if (subs[i] == "") {
                 subs[i] = "ε";
-                //cout << "ε" << endl;
             }
             cout << subs[i] << endl;
         }
-        cout << "alt subs size again " << subs.size() << endl;
+        //cout << "alt subs size again " << subs.size() << endl;
         for (int i = 0;  i < subs.size(); i++) {
             cout << "i " << i << endl;
             //cout << "len of subs{i}: " << subs[i].length() << endl;
@@ -220,11 +217,13 @@ int main(){
         }
         cout << endl;
     }
-    /*cout << "nterms and terms" << endl;
+    cout << "nterms and terms" << endl;
     cout << "NTERMS: ";
     for (int i = 0;  i < nonTerms.size(); i++) cout << nonTerms[i] << " ";
     cout << endl;
     cout << "TERMS: ";
-    for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";*/
+    for (int i = 0;  i < terms.size(); i++) cout << terms[i] << " ";
     return 0;
 }
+
+//анекдот: по мне (и моему коду) не скажешь, но в школе мне нравился с++
