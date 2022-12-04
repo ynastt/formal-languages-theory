@@ -10,6 +10,7 @@ using namespace std;
 vector<string> nonTerms;
 vector<string> terms;
 vector<string> genNterms;
+vector<string> reachNterms;
 
 struct rightPart {
     int type; //1 - nterm, 2 - term
@@ -252,6 +253,13 @@ bool isInGenNterms(string nterm, vector<string> gen) {
     return false;
 }
 
+bool isInReachNterms(string nterm, vector<string> reach) {
+    for (auto el : reach) {
+        if (el == nterm) return true;
+    }
+    return false;
+}
+
 // количество нетерминалов в правой части правила
 int getQuantityOfNterms(vector<rightPart> rights) {
     int s = 0;
@@ -261,7 +269,7 @@ int getQuantityOfNterms(vector<rightPart> rights) {
     return s;
 }
 
-void updateGrammar1() {
+void updateGrammar() {
     int len = grammar.size();
     for (int i = 0; i < len; i++) {
         Rule r = grammar[i];
@@ -393,7 +401,47 @@ void removeNonGeneratingNterms() {
 }
 
 void removeUnreachableNterms() {
-
+    reachNterms.push_back("S"); 
+    int setSize = 0;
+    int r = 0;
+    cout << "grammar size:" << grammar.size() << endl;
+    while (reachNterms.size() > setSize) {
+        setSize = reachNterms.size();
+        while (r < grammar.size()) {
+            string nterm = grammar[r].left;
+            vector<rightPart> rights = grammar[r].right;
+            cout << "NTERM: " << nterm << endl;
+            cout << "RIGHTPART: ";
+            // добавляем нетерминалы достижимые из данного
+            for (int j = 0;  j < rights.size(); j++) {
+                cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}" << endl;
+                if (rights[j].type == 1) {
+                    if (!isInReachNterms(rights[j].val, reachNterms) && rights[j].val != "S") {
+                        reachNterms.push_back(rights[j].val);
+                    }
+                    // cout << "===" << endl;   
+                    // for (auto n: reachNterms) {
+                    //     cout << n << " ";
+                    // }
+                    // cout << endl;
+                    // cout << "===" << endl;
+                    // обновляем правила
+                    nonTerms = reachNterms;
+                    updateGrammar();
+                    r = 0; 
+                }   
+            }
+            r++;     
+        }
+    }
+    cout << "===" << endl;   
+    for (auto n: reachNterms) {
+        cout << n << " ";
+    }
+    cout << endl;
+    cout << "===" << endl; 
+    cout << endl;
+    nonTerms = reachNterms; 
 }
 
 int main() {
@@ -409,12 +457,16 @@ int main() {
     printTerms();
     //убираем непорождающие нетерминалы
     removeNonGeneratingNterms();
-    cout << "Grammar with remover non-generating nonterminals:" << endl;
+    cout << "Grammar with removed non-generating nonterminals:" << endl;
     printTerms();
-    updateGrammar1();
+    updateGrammar();
     printGrammar();
     //убираем недостижимые нетерминалы
-    //removeUnreachableNterms();
+    cout << "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" << endl;
+    removeUnreachableNterms();
+    cout << "Grammar with removed unreachable nonterminals:" << endl;
+    printTerms();
+    printGrammar();
     return 0;
 
 }
