@@ -12,6 +12,11 @@ vector<string> terms;
 vector<string> genNterms;
 vector<string> reachNterms;
 
+struct First1Set {
+    string nterm;
+    vector<string> first1;
+};
+
 struct rightPart {
     int type; //1 - nterm, 2 - term
     string val; //A, B, ..., a, b, ...
@@ -215,7 +220,7 @@ void printGrammar() {
     cout << "grammar size: " << grammar.size() << endl;
     for (int i = 0; i < grammar.size(); i++) {
         Rule r = grammar[i];
-        cout << "-----------" << endl;
+        cout << endl;
         cout << "RULE " << i + 1 << endl;
         cout << "left: " << r.left << ", ";
         cout << "right: ";
@@ -442,6 +447,10 @@ void removeUnreachableNterms() {
     nonTerms = reachNterms; 
 }
 
+void constructFirst1() {
+
+}
+
 int main() {
     int n;
     cout << "Enter test number" << endl;
@@ -467,9 +476,8 @@ int main() {
     printTerms();
     updateGrammar();
     printGrammar();
+    cout << "> FIRST 1 sets for nonterminals <" << endl;
     return 0;
-
 }
 
-
-//анекдот: по мне (и моему коду) не скажешь, но в школе мне нравился с++
+// ааааааааа
