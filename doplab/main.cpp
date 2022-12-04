@@ -12,10 +12,10 @@ vector<string> terms;
 vector<string> genNterms;
 vector<string> reachNterms;
 
-struct First1Set {
-    string nterm;
-    vector<string> first1;
-};
+// struct First1Set {
+//     string nterm;
+//     vector<string> first1;
+// };
 
 struct rightPart {
     int type; //1 - nterm, 2 - term
@@ -28,6 +28,7 @@ struct Rule {
 };
 
 vector<Rule> grammar;
+map <string, vector<string>> first_one_set;
 
 bool err = false;
 
@@ -241,7 +242,7 @@ int FirstIndexNterminRightPart(vector<rightPart> rights) {
     return -1;
 }
 
-// принадлежит ли нетерминал множеству порождающих нетерминалов
+// принадлежит ли нетерминал вектору (множеству порождающих нетерминалов)
 bool isInGenNterms(string nterm, vector<string> gen) {
     for (auto el : gen) {
         if (el == nterm) return true;
@@ -447,8 +448,104 @@ void removeUnreachableNterms() {
     nonTerms = reachNterms; 
 }
 
-void constructFirst1() {
+void printFirst1Set() {
+    for (auto n : nonTerms) {
+        cout << "FIRST1(" << n << ") = {";
+        for(int i = 0; i < first_one_set[n].size(); i++) {
+            if ( i == first_one_set[n].size() - 1) cout << first_one_set[n][i];
+            else cout << first_one_set[n][i] << ", ";
+        }
+        cout << "}" << endl;
+    }
+}
 
+vector<string> findFirst1(string nterm) {
+    vector<string> f;
+    for (auto rule : grammar) {
+        if (rule.left == nterm) {
+            if (first_one_set[nterm].size() == 1 && first_one_set[nterm][0] == "") {
+                cout << "remove first empty set" << endl;
+                first_one_set[nterm].pop_back();
+            }
+            vector<rightPart> rt = rule.right;
+            if (rt.size() == 1) {
+                cout << "nonterm -> term" << endl;
+                if (rt[0].val == "") {
+                    cout << "term is eps" << endl;
+                    f.push_back("eps");
+                } else {
+                    if (rt[0].type == 2) {
+                        cout << "term is letter" << endl;
+                        f.push_back(rt[0].val);
+                    }
+                    if (rt[0].type == 1) {
+                        cout << "term is another nonterm" << endl;
+                        vector<string> vec = findFirst1(rt[0].val);
+                        for (auto v : vec) {
+                            f.push_back(v);
+                        }  
+                    }      
+                }
+            } else {
+                cout << "nterm -> term1 term2..." << endl;
+                if(rt[0].type == 2) {
+                    cout << "term1 is letter" << endl;
+                    f.push_back(rt[0].val);
+                }
+                if(rt[0].type == 1) {
+                    cout << "term1 is nonterm" << endl;\
+                    if (rt[0].val[0] == nterm.c_str()[0]) {
+                        cout << "левая рекурсия" << endl;
+                        break;
+                    }
+                    vector<string> vec2 = findFirst1(rt[0].val);
+                    cout << "find first1 set of term1" << endl;
+                    for(auto v : vec2) {
+                        f.push_back(v);
+                    }
+                    if (isInGenNterms("eps", vec2)) {
+                        cout << "first1 set of term1 might has eps, do the union with next first1"<< endl;
+                        for(int i = 1; i < rt.size(); i++) {
+                            vector<string> vec3 = findFirst1(rt[i].val);
+                            if (isInGenNterms("eps", vec3)) {
+                                for(auto v : vec3) {
+                                    f.push_back(v);
+                                }
+                            }
+                            if (rt[rt.size() - 1].type == 2 && isInGenNterms("eps", vec3)) {
+                                f.push_back(rt[rt.size() - 1].val);
+                            }
+                        }
+                    }      
+                }
+            }
+        }
+    }
+    sort(f.begin(), f.end());
+    auto lt = unique(f.begin(), f.end());
+    f.erase(lt, f.end());
+    return f;
+}
+
+void constructFirst1() {
+    int setSize = 0;
+    for (auto n : nonTerms) {
+        first_one_set[n].push_back("");
+    }
+    for (auto n : nonTerms) {
+        bool changed = true;
+        cout << "NETERM: " << n << endl;
+        while(changed) {
+            changed = false;
+            setSize = first_one_set[n].size();
+            cout << "setsize: " << setSize << endl;
+            vector<string> res = findFirst1(n);
+            changed = res.size() > setSize;
+            first_one_set[n] = res;
+            printFirst1Set();
+        }
+        cout << endl;
+    }
 }
 
 int main() {
@@ -470,13 +567,14 @@ int main() {
     updateGrammar();
     printGrammar();
     //убираем недостижимые нетерминалы
-    //removeUnreachableNterms();
     cout << "> Grammar with removed unreachable nonterminals <" << endl;
     removeUnreachableNterms();
     printTerms();
     updateGrammar();
     printGrammar();
     cout << "> FIRST 1 sets for nonterminals <" << endl;
+    constructFirst1();
+    printFirst1Set();
     return 0;
 }
 
