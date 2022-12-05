@@ -614,6 +614,9 @@ void constructFollow() {
                         } else {
                             rightPart next_sym = rt[j];
                             //cout << "next sym is: " << next_sym.val << endl;
+                            if (follow_set[right.val][0] == "") {
+                                follow_set[right.val].erase(follow_set[right.val].begin() + 0);
+                            } 
                             if (next_sym.type == 2) {
                                 follow_set[right.val].push_back(next_sym.val);
                                 break;
@@ -626,6 +629,7 @@ void constructFollow() {
                                 //    cout << v << " ";
                                 //}
                                 // cout << endl;
+                                
                                 for (auto v : vecf) {
                                     if(v != "eps") {
                                         follow_set[right.val].push_back(v);
