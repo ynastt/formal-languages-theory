@@ -24,6 +24,7 @@ struct Rule {
 
 vector<Rule> grammar;
 map <string, vector<string>> first_one_set;
+map <string, vector<string>> first_k_set;
 map <string, vector<string>> follow_set;
 
 bool err = false;
@@ -156,7 +157,7 @@ vector<Rule> parseRuleLine(string str) {
             if (subs[i] == "") {
                 subs[i] = "ε";
             }
-            cout << subs[i] << endl;
+            //cout << subs[i] << endl;
         }
         //cout << "alt subs size again " << subs.size() << endl;
         for (int i = 0;  i < subs.size(); i++) {
@@ -459,6 +460,18 @@ void printFirst1Set() {
     cout << endl;
 }
 
+void printFirstkSet(int k)  {
+    for (auto n : nonTerms) {
+        cout << "FIRST" << k << "(" << n << ") = {";
+        for(int i = 0; i < first_k_set[n].size(); i++) {
+            if ( i == first_k_set[n].size() - 1) cout << first_k_set[n][i];
+            else cout << first_k_set[n][i] << ", ";
+        }
+        cout << "}" << endl;
+    }
+    cout << endl;
+}
+
 void printFollowSet() {
     for (auto n : nonTerms) {
         cout << "FOLLOW(" << n << ") = {";
@@ -560,8 +573,6 @@ void constructFirst1() {
     }
 }
 
-
-
 void constructFollow() {
     int setSize = 0;
     for (auto n : nonTerms) {
@@ -658,8 +669,80 @@ void constructFollow() {
                 }
             }   
         }
-    }//   while
+    }
 }
+
+void constructFirstk(int k) {
+    int setSize = 0;
+    for (auto n : nonTerms) {
+        first_k_set[n].push_back("");
+    }
+    bool changed = true;
+    while(changed) {
+        changed = false;
+        for( auto n : nonTerms) {
+            cout << "nterm: " << n << endl;
+            setSize = first_k_set[n].size();
+            cout << "setsize: " << setSize << endl;
+            for (auto rule : grammar) {
+                if (rule.left == n) {
+                    vector<string> mightbe;
+                    if (first_k_set[n].size() == 1 && first_k_set[n][0] == "") {
+                        cout << "remove first empty set" << endl;
+                        first_k_set[n].pop_back();
+                    }
+                    vector<rightPart> rt = rule.right;
+                    for(int i = 0; i < rt.size(); i++) {
+                        cout << "i " << i << " rt size: " << rt.size() << endl;
+                        rightPart right = rt[i];
+                        if (right.type == 1) {
+                            cout << "neterm" << endl;
+                            vector<string> buf = mightbe;
+                            for(int i = 0; i < buf.size(); i++) {
+                                if(!isInGenNterms("eps", first_one_set[right.val])) {
+                                    mightbe.erase(mightbe.begin()+ i);
+                                }
+                                vector<string> bufFirstK = first_k_set[right.val];
+                                for ( int j = 0; j < bufFirstK.size(); j++) {
+                                    if (bufFirstK[i] == "eps") continue;
+                                    string another = buf[i].append(right.val);
+                                    cout << "another candidate now is: " << another << endl;
+                                    if (another.length() == k) {
+                                        first_k_set[n].push_back(another.substr(0,k));
+                                    } else {
+                                        mightbe.push_back(another);
+                                    }
+                                }
+                            }
+                        }
+                        if (right.type == 2) {
+                            cout << "term" << endl;
+                            vector<string> buf = mightbe;
+                            for(int i = 0; i < buf.size(); i++) {
+                                mightbe.erase(mightbe.begin()+ i);
+                                buf[i].append(right.val);
+                                cout << "candidate now is: " << buf[i] << endl;
+                                if (buf[i].length() == k) {
+                                    first_k_set[n].push_back(buf[i]);
+                                } else {
+                                    mightbe.push_back(buf[i]);
+                                }
+                            }
+                        }
+                        if (mightbe.size() == 0) break;
+                    }
+                    for (int s = 0; s < mightbe.size(); s++) {
+                        if (mightbe[s] == "") mightbe.erase(mightbe.begin()+ s);
+                    }   
+                }
+            }
+            printFirstkSet(k);
+            int newSetSize = first_k_set[n].size();
+            if (newSetSize != setSize)
+            changed = true;    
+        }
+    }
+}    
 
 int main() {
     int n;
@@ -688,11 +771,15 @@ int main() {
     cout << "> FIRST 1 sets for nonterminals <" << endl;
     constructFirst1();
     printFirst1Set();
-    
     cout << "> FOLLOW sets for nonterminals <" << endl;
     constructFollow();
     printFollowSet();
+    cout << "> FIRST k sets for nonterminals <" << endl;
+    constructFirstk(2);
+    printFirstkSet(2);
     return 0;
 }
 
 // ааааааааа (крик)
+// хотела бы я сказать, что сиплюсплюснулась настолько, чтобы понять 3 лабораторную, но пока нет...
+// тесты 1, 3, 6 
