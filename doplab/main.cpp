@@ -476,22 +476,22 @@ vector<string> findFirst1(string nterm) {
     for (auto rule : grammar) {
         if (rule.left == nterm) {
             if (first_one_set[nterm].size() == 1 && first_one_set[nterm][0] == "") {
-                cout << "remove first empty set" << endl;
+                //cout << "remove first empty set" << endl;
                 first_one_set[nterm].pop_back();
             }
             vector<rightPart> rt = rule.right;
             if (rt.size() == 1) {
-                cout << "nonterm -> term" << endl;
+                //cout << "nonterm -> term" << endl;
                 if (rt[0].val == "") {
-                    cout << "term is eps" << endl;
+                    //cout << "term is eps" << endl;
                     f.push_back("eps");
                 } else {
                     if (rt[0].type == 2) {
-                        cout << "term is letter" << endl;
+                        //cout << "term is letter" << endl;
                         f.push_back(rt[0].val);
                     }
                     if (rt[0].type == 1) {
-                        cout << "term is another nonterm" << endl;
+                        //cout << "term is another nonterm" << endl;
                         vector<string> vec = findFirst1(rt[0].val);
                         for (auto v : vec) {
                             f.push_back(v);
@@ -499,24 +499,24 @@ vector<string> findFirst1(string nterm) {
                     }      
                 }
             } else {
-                cout << "nterm -> term1 term2..." << endl;
+                //cout << "nterm -> term1 term2..." << endl;
                 if(rt[0].type == 2) {
-                    cout << "term1 is letter" << endl;
+                    //cout << "term1 is letter" << endl;
                     f.push_back(rt[0].val);
                 }
                 if(rt[0].type == 1) {
-                    cout << "term1 is nonterm" << endl;\
+                    //cout << "term1 is nonterm" << endl;
                     if (rt[0].val[0] == nterm.c_str()[0]) {
-                        cout << "левая рекурсия" << endl;
+                        //cout << "левая рекурсия" << endl;
                         break;
                     }
                     vector<string> vec2 = findFirst1(rt[0].val);
-                    cout << "find first1 set of term1" << endl;
+                    //cout << "find first1 set of term1" << endl;
                     for(auto v : vec2) {
                         f.push_back(v);
                     }
                     if (isInGenNterms("eps", vec2)) {
-                        cout << "first1 set of term1 might has eps, do the union with next first1"<< endl;
+                        //cout << "first1 set of term1 might has eps, do the union with next first1"<< endl;
                         for(int i = 1; i < rt.size(); i++) {
                             vector<string> vec3 = findFirst1(rt[i].val);
                             if (isInGenNterms("eps", vec3)) {
@@ -546,11 +546,11 @@ void constructFirst1() {
     }
     for (auto n : nonTerms) {
         bool changed = true;
-        cout << "NETERM: " << n << endl;
+        //cout << "NETERM: " << n << endl;
         while(changed) {
             changed = false;
             setSize = first_one_set[n].size();
-            cout << "setsize: " << setSize << endl;
+            //cout << "setsize: " << setSize << endl;
             vector<string> res = findFirst1(n);
             changed = res.size() > setSize;
             first_one_set[n] = res;
@@ -560,14 +560,7 @@ void constructFirst1() {
     }
 }
 
-// vector<string> findFollow(string nterm) {
-//     vector<string> f;
-    
-//     sort(f.begin(), f.end());
-//     auto lt = unique(f.begin(), f.end());
-//     f.erase(lt, f.end());
-//     return f;
-// }
+
 
 void constructFollow() {
     int setSize = 0;
@@ -575,69 +568,93 @@ void constructFollow() {
         if (n == "S") follow_set["S"].push_back("$");
         else follow_set[n].push_back("");
     }
-    cout << "initial follow" << endl;
-    printFollowSet();
+    //cout << "initial follow" << endl;
+    //printFollowSet();
     bool changed = true;
     while(changed) {
         changed = false;
-        
         for (auto rule : grammar) {
-            cout << "==rule:" << endl;
-            cout << "left: " << rule.left << ", ";
-            cout << "right: ";
-            for (int j = 0;  j < rule.right.size(); j++) {
-                cout << "{type:" << rule.right[j].type << ", val:" << rule.right[j].val << "}";
-                if (j != rule.right.size() - 1) cout << ", ";   
-            }
-            cout << endl;
-
+            
+            // cout << "==rule: ";
+            // cout << "left: " << rule.left << ", ";
+            // cout << "right: ";
+            // for (int j = 0;  j < rule.right.size(); j++) {
+            //     cout << "{type:" << rule.right[j].type << ", val:" << rule.right[j].val << "}";
+            //     if (j != rule.right.size() - 1) cout << ", ";   
+            // }
+            // cout << endl;    
             string nterm = rule.left;
             vector<rightPart> rt = rule.right;
             for(int i = 0; i < rt.size(); i++) {
-                cout << "i " << i << endl;
+                //cout << "i " << i << " rt size: " << rt.size() << endl;
                 rightPart right = rt[i];
                 if (right.type == 1) {
-                    cout << "nonterm right" << endl;
+                    //cout << "nonterm right " << rt[i].val << endl;
                     setSize = follow_set[right.val].size();
+                    if (setSize == 1 && follow_set[right.val][0] == "") {
+                        setSize = 0;
+                        //follow_set[right.val].pop_back();
+                    }    
+                    //cout << "setsize is: "<< setSize << endl;
                     for(int j = i + 1; j < rt.size() + 1; j++) {
+                        
+                        //cout << "searching for follow" << endl;
+                        
                         if (j == rt.size()) {
+                            //cout << " last sym" << endl;
                             vector<string> vec2 = follow_set[nterm];
+                            if (follow_set[right.val][0] == "") {
+                                follow_set[right.val].erase(follow_set[right.val].begin() + 0);
+                            } 
                             for (auto v : vec2) {
+                                if (v == "") v ="eps";
                                 follow_set[right.val].push_back(v);
                             }
+                            if (j == rt.size()) break;
                         } else {
                             rightPart next_sym = rt[j];
+                            //cout << "next sym is: " << next_sym.val << endl;
                             if (next_sym.type == 2) {
                                 follow_set[right.val].push_back(next_sym.val);
                                 break;
                             }    
                             if (next_sym.type == 1) {
+                                //cout << "rule: nterm -> nterm nterm" << endl;
                                 vector<string> vecf = first_one_set[next_sym.val];
+                                //cout << "first set is" << endl;
+                                //for (auto v : vecf) {
+                                //    cout << v << " ";
+                                //}
+                                // cout << endl;
                                 for (auto v : vecf) {
                                     if(v != "eps") {
                                         follow_set[right.val].push_back(v);
                                     }
                                 }
-                                if (isInGenNterms("eps", first_one_set[next_sym.val])) {
-                                    vector<string> vec3 = first_one_set[nterm];
-                                    for (auto v : vec3) {
-                                        follow_set[right.val].push_back(v);
-                                    }
+                                if (!isInGenNterms("eps", first_one_set[next_sym.val])) {
                                     break;
                                 }
                             }
+                            //|| isInGenNterms("eps", first_one_set[rt[j].val])
+
                         }
                             
                     }
-                    if (follow_set[right.val].size() != setSize) {
+                    //unique and sort
+                    sort(follow_set[right.val].begin(), follow_set[right.val].end());
+                    auto last = unique(follow_set[right.val].begin(), follow_set[right.val].end());
+                    follow_set[right.val].erase(last, follow_set[right.val].end());
+
+                    int newsetSize = follow_set[right.val].size();
+                    //cout << "newsize: " << newsetSize << endl;
+                    //printFollowSet();
+                    if (newsetSize != setSize) {
                         changed = true;
                     }
                 }
-            }
-
+            }   
         }
-        //    
-    }
+    }//   while
 }
 
 int main() {
@@ -669,8 +686,8 @@ int main() {
     printFirst1Set();
     
     cout << "> FOLLOW sets for nonterminals <" << endl;
-    //constructFollow();
-    //printFollowSet();
+    constructFollow();
+    printFollowSet();
     return 0;
 }
 
