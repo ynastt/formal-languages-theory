@@ -12,11 +12,6 @@ vector<string> terms;
 vector<string> genNterms;
 vector<string> reachNterms;
 
-// struct First1Set {
-//     string nterm;
-//     vector<string> first1;
-// };
-
 struct rightPart {
     int type; //1 - nterm, 2 - term
     string val; //A, B, ..., a, b, ...
@@ -29,6 +24,7 @@ struct Rule {
 
 vector<Rule> grammar;
 map <string, vector<string>> first_one_set;
+map <string, vector<string>> follow_set;
 
 bool err = false;
 
@@ -69,6 +65,7 @@ vector<string> getListOfAltSubstrings(string str) {
     //cout << "ALT SUBS" << endl;
     //cout << "string: "<< str << endl;
     int k = str.length();
+    if(str[k-1] == '|') k += 1;
     //cout << "k: "<< k << endl;
     int i = 0;
     while( i < k) {
@@ -81,7 +78,7 @@ vector<string> getListOfAltSubstrings(string str) {
             return s;
         } else {
             //cout << "second alt index: " << getSecondAltIndex(str) << endl;
-            if (alt == k - 1 || getSecondAltIndex(str)- alt == 1) {
+            if ( k == 1  && str == "" ) {
                 //cout << "case last alt" << endl;
                 s.push_back(str.substr(i, 1));
                 s.push_back("");
@@ -91,10 +88,12 @@ vector<string> getListOfAltSubstrings(string str) {
                 s.push_back(str.substr(0, alt));
                 str = str.substr(alt + 1);
                 k = str.length();
-                //i = 0;
+                //cout << "now k is" << k << endl;
+                if (k == 0) {
+                    k = 1;
+                }
             }
         }
-        //i++;
     }
     return s;
 }
@@ -157,7 +156,7 @@ vector<Rule> parseRuleLine(string str) {
             if (subs[i] == "") {
                 subs[i] = "ε";
             }
-            //cout << subs[i] << endl;
+            cout << subs[i] << endl;
         }
         //cout << "alt subs size again " << subs.size() << endl;
         for (int i = 0;  i < subs.size(); i++) {
@@ -457,6 +456,19 @@ void printFirst1Set() {
         }
         cout << "}" << endl;
     }
+    cout << endl;
+}
+
+void printFollowSet() {
+    for (auto n : nonTerms) {
+        cout << "FOLLOW(" << n << ") = {";
+        for(int i = 0; i < follow_set[n].size(); i++) {
+            if ( i == follow_set[n].size() - 1) cout << follow_set[n][i];
+            else cout << follow_set[n][i] << ", ";
+        }
+        cout << "}" << endl;
+    }
+    cout << endl;
 }
 
 vector<string> findFirst1(string nterm) {
@@ -542,9 +554,89 @@ void constructFirst1() {
             vector<string> res = findFirst1(n);
             changed = res.size() > setSize;
             first_one_set[n] = res;
-            printFirst1Set();
+            //printFirst1Set();
         }
-        cout << endl;
+        //cout << endl;
+    }
+}
+
+// vector<string> findFollow(string nterm) {
+//     vector<string> f;
+    
+//     sort(f.begin(), f.end());
+//     auto lt = unique(f.begin(), f.end());
+//     f.erase(lt, f.end());
+//     return f;
+// }
+
+void constructFollow() {
+    int setSize = 0;
+    for (auto n : nonTerms) {
+        if (n == "S") follow_set["S"].push_back("$");
+        else follow_set[n].push_back("");
+    }
+    cout << "initial follow" << endl;
+    printFollowSet();
+    bool changed = true;
+    while(changed) {
+        changed = false;
+        
+        for (auto rule : grammar) {
+            cout << "==rule:" << endl;
+            cout << "left: " << rule.left << ", ";
+            cout << "right: ";
+            for (int j = 0;  j < rule.right.size(); j++) {
+                cout << "{type:" << rule.right[j].type << ", val:" << rule.right[j].val << "}";
+                if (j != rule.right.size() - 1) cout << ", ";   
+            }
+            cout << endl;
+
+            string nterm = rule.left;
+            vector<rightPart> rt = rule.right;
+            for(int i = 0; i < rt.size(); i++) {
+                cout << "i " << i << endl;
+                rightPart right = rt[i];
+                if (right.type == 1) {
+                    cout << "nonterm right" << endl;
+                    setSize = follow_set[right.val].size();
+                    for(int j = i + 1; j < rt.size() + 1; j++) {
+                        if (j == rt.size()) {
+                            vector<string> vec2 = follow_set[nterm];
+                            for (auto v : vec2) {
+                                follow_set[right.val].push_back(v);
+                            }
+                        } else {
+                            rightPart next_sym = rt[j];
+                            if (next_sym.type == 2) {
+                                follow_set[right.val].push_back(next_sym.val);
+                                break;
+                            }    
+                            if (next_sym.type == 1) {
+                                vector<string> vecf = first_one_set[next_sym.val];
+                                for (auto v : vecf) {
+                                    if(v != "eps") {
+                                        follow_set[right.val].push_back(v);
+                                    }
+                                }
+                                if (isInGenNterms("eps", first_one_set[next_sym.val])) {
+                                    vector<string> vec3 = first_one_set[nterm];
+                                    for (auto v : vec3) {
+                                        follow_set[right.val].push_back(v);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                            
+                    }
+                    if (follow_set[right.val].size() != setSize) {
+                        changed = true;
+                    }
+                }
+            }
+
+        }
+        //    
     }
 }
 
@@ -575,7 +667,11 @@ int main() {
     cout << "> FIRST 1 sets for nonterminals <" << endl;
     constructFirst1();
     printFirst1Set();
+    
+    cout << "> FOLLOW sets for nonterminals <" << endl;
+    //constructFollow();
+    //printFollowSet();
     return 0;
 }
 
-// ааааааааа
+// ааааааааа (крик)
