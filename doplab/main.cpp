@@ -11,6 +11,7 @@ vector<string> nonTerms;
 vector<string> terms;
 vector<string> genNterms;
 vector<string> reachNterms;
+vector<string> hasEpsInGenTerms;
 
 struct rightPart {
     int type; //1 - nterm, 2 - term
@@ -242,7 +243,7 @@ int FirstIndexNterminRightPart(vector<rightPart> rights) {
     return -1;
 }
 
-// принадлежит ли нетерминал вектору (множеству порождающих нетерминалов)
+// принадлежит ли нетерминал вектору (например множеству порождающих нетерминалов)
 bool isInGenNterms(string nterm, vector<string> gen) {
     for (auto el : gen) {
         if (el == nterm) return true;
@@ -250,13 +251,6 @@ bool isInGenNterms(string nterm, vector<string> gen) {
     // if (binary_search(gen.begin(), gen.end(), nterm)) {
     //     return true;
     // }
-    return false;
-}
-
-bool isInReachNterms(string nterm, vector<string> reach) {
-    for (auto el : reach) {
-        if (el == nterm) return true;
-    }
     return false;
 }
 
@@ -415,7 +409,7 @@ void removeUnreachableNterms() {
             // cout << "NTERM: " << nterm << endl;
             // cout << "RIGHTPART: " << endl;
             // добавляем нетерминалы достижимые из данного
-            if (isInReachNterms(nterm, reachNterms)) {
+            if (isInGenNterms(nterm, reachNterms)) {
                 for (int j = 0;  j < rights.size(); j++) {
                     //cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}" << endl;
                     if (rights[j].type == 1) {
@@ -484,75 +478,6 @@ void printFollowSet() {
     cout << endl;
 }
 
-
-// vector<string> findFirst1(string nterm) {
-//     vector<string> f;
-//     for (auto rule : grammar) {
-//         if (rule.left == nterm) {
-//             if (first_one_set[nterm].size() == 1 && first_one_set[nterm][0] == "") {
-//                 cout << "remove first empty set" << endl;
-//                 first_one_set[nterm].pop_back();
-//             }
-//             vector<rightPart> rt = rule.right;
-//             if (rt.size() == 1) {
-//                 cout << "nonterm -> term" << endl;
-//                 if (rt[0].val == "") {
-//                     cout << "term is eps" << endl;
-//                     f.push_back("eps");
-//                 } else {
-//                     if (rt[0].type == 2) {
-//                         cout << "term is letter "<< rt[0].val << endl;
-//                         f.push_back(rt[0].val);
-//                     }
-//                     if (rt[0].type == 1) {
-//                         cout << "term is another nonterm "<< rt[0].val << endl;
-//                         vector<string> vec = findFirst1(rt[0].val);
-//                         for (auto v : vec) {
-//                             f.push_back(v);
-//                         }  
-//                     }      
-//                 }
-//             } else {
-//                 cout << "nterm -> term1 term2..." << endl;
-//                 if(rt[0].type == 2) {
-//                     cout << "term1 is letter" << endl;
-//                     f.push_back(rt[0].val);
-//                 }
-//                 if(rt[0].type == 1) {
-//                     cout << "term1 is nonterm" << endl;
-//                     if (rt[0].val[0] == nterm.c_str()[0]) {
-//                         cout << "левая рекурсия" << endl;
-//                         break;
-//                     }
-//                     vector<string> vec2 = findFirst1(rt[0].val);
-//                     cout << "find first1 set of term1" << endl;
-//                     for(auto v : vec2) {
-//                         f.push_back(v);
-//                     }
-//                     if (isInGenNterms("eps", vec2)) {
-//                         cout << "first1 set of term1 might has eps, do the union with next first1"<< endl;
-//                         for(int i = 1; i < rt.size(); i++) {
-//                             vector<string> vec3 = findFirst1(rt[i].val);
-//                             if (isInGenNterms("eps", vec3)) {
-//                                 for(auto v : vec3) {
-//                                     f.push_back(v);
-//                                 }
-//                             }
-//                             if (rt[rt.size() - 1].type == 2 && isInGenNterms("eps", vec3)) {
-//                                 f.push_back(rt[rt.size() - 1].val);
-//                             }
-//                         }
-//                     }      
-//                 }
-//             }
-//         }
-//     }
-//     sort(f.begin(), f.end());
-//     auto lt = unique(f.begin(), f.end());
-//     f.erase(lt, f.end());
-//     return f;
-// }
-
 void constructFirst1() {
     int setSize = 0;
     for (auto n : nonTerms) {
@@ -562,13 +487,13 @@ void constructFirst1() {
     while(changed) {
         changed = false;
         for (auto n : nonTerms) {
-            cout << "NETERM: " << n << endl;
+            //cout << "NETERM: " << n << endl;
             setSize = first_one_set[n].size();
-            cout << "setsize: " << setSize << endl;
+            //cout << "setsize: " << setSize << endl;
             for (auto rule : grammar) {
                 if (rule.left == n) {
                     if (first_one_set[n].size() == 1 && first_one_set[n][0] == "") {
-                        cout << "remove first empty set" << endl;
+                        //cout << "remove first empty set" << endl;
                         first_one_set[n].pop_back();
                         setSize = 0;
                     }
@@ -576,7 +501,7 @@ void constructFirst1() {
                     for (int z = 0; z < rt.size(); z++) {
                         if (rt[z].type == 2) {
                             if (rt[0].val == "") {
-                                cout << "term is eps" << endl;
+                                //cout << "term is eps" << endl;
                                 first_one_set[n].push_back("eps");
                             } else {
                                 first_one_set[n].push_back(rt[0].val);
@@ -605,9 +530,9 @@ void constructFirst1() {
 
             
             changed = first_one_set[n].size() != setSize;
-            printFirst1Set();
+            //printFirst1Set();
+            //cout << endl;
         }
-        cout << endl;
     }
 }
 
@@ -710,90 +635,135 @@ void constructFollow() {
     }
 }
 
+void findNtermsWithEpsinGenTerm() {
+    for(auto n : nonTerms) {
+        for (auto rule : grammar) {
+            if (rule.left == n) {
+                vector<rightPart> rt = rule.right;
+                for (auto r : rt) {
+                    if(r.val == "") {
+                        hasEpsInGenTerms.push_back(n);
+                    }
+                }
+            }
+        }
+    }
+    sort(hasEpsInGenTerms.begin(), hasEpsInGenTerms.end());
+    auto end = unique(hasEpsInGenTerms.begin(), hasEpsInGenTerms.end());
+    hasEpsInGenTerms.erase(end, hasEpsInGenTerms.end());
+}
+
 void constructFirstk(int k) {
     int setSize = 0;
-    for (auto n : nonTerms) {
-        first_k_set[n].push_back("");
-    }
-    cout << "initial set k" << endl;
-    printFirstkSet(k);
+    // for (auto n : nonTerms) {
+    //     first_k_set[n].push_back("");
+    // }
     bool changed = true;
     while(changed) {
         changed = false;
-        for( auto n : nonTerms) {
-            cout << "nterm: " << n << endl;
+        for(auto n : nonTerms) {
+            // cout << "nonterm: " << n << endl;
             setSize = first_k_set[n].size();
-            if (setSize == 1 && first_k_set[n][0] == "") {
-                setSize = 0;
-                //first_k_set[n].pop_back();
-            }
-            cout << "setsize: " << setSize << endl;
-            if(isInGenNterms("eps", first_one_set[n])) {
+            // cout << "setsize: " << setSize << endl;
+            if(isInGenNterms(n, hasEpsInGenTerms)) {
                 first_k_set[n].push_back("eps");
             }
             for (auto rule : grammar) {
-                if (rule.left == n) {
+                if (rule.left == n) { 
                     vector<string> mightbe;
                     mightbe.push_back("");
-                    // if (first_k_set[n].size() == 1 && first_k_set[n][0] == "") {
-                    //     cout << "remove first empty set" << endl;
-                    //     first_k_set[n].pop_back();
-                    // }
                     vector<rightPart> rt = rule.right;
                     for(int i = 0; i < rt.size(); i++) {
+                        sort(mightbe.begin(), mightbe.end());
+                        auto end = unique(mightbe.begin(), mightbe.end());
+                        mightbe.erase(end, mightbe.end());
                         rightPart right = rt[i];
-                        cout << "i " << i << ", rt size: " << rt.size() << ", right: " << rt[i].val << endl;
+                        // cout << "rule right is: " << right.val << endl;
                         if (right.type == 1) {
-                            cout << "neterm" << endl;
+                            // cout << "neterm" << endl;
                             vector<string> buf = mightbe;
+                            // cout << "buf size: " << buf.size() << endl;                   
                             for(int i = 0; i < buf.size(); i++) {
-                                if(!isInGenNterms("eps", first_one_set[right.val])) {
-                                    mightbe.erase(mightbe.begin() + i);
+                                // если следующий нетерминал может перевести по правилу в непустую строку, 
+                                // удаляем элемент, добавленный на предыдущем шаге в возможный к-префикс
+                                findNtermsWithEpsinGenTerm();
+                                if(!isInGenNterms(right.val, hasEpsInGenTerms)) {  
+                                    mightbe.erase(mightbe.begin() + i);         
                                 }
+                                // cout << "updated mightbe: ";
+                                // for (auto b : mightbe) {
+                                //     cout << b << " ";
+                                // }
+                                // cout << endl;
                                 vector<string> bufFirstK = first_k_set[right.val];
+                                // cout << "copied first K set: ";
+                                // for(int i = 0; i < bufFirstK.size(); i++) {
+                                //     cout << bufFirstK[i] << " ";
+                                // }
+                                // cout << endl;
                                 for ( int j = 0; j < bufFirstK.size(); j++) {
-                                    if (bufFirstK[i] == "eps") continue;
-                                    string another = buf[i] + bufFirstK[i];
-                                    cout << "another candidate now is: " << another << endl;
-                                    if (another.length() == k) {
-                                        first_k_set[n].push_back(another);
-                                    } else if (another.length() > k) {
-                                        first_k_set[n].push_back(another.substr(0,k));
+                                    // cout << "EL n:"<< bufFirstK[j] << endl;
+                                    if (bufFirstK[j] == "eps") continue;
+                                    string test = buf[i] + bufFirstK[j];
+                                    // cout << "test: " << test << endl;
+                                    if (test.length() == k) {
+                                        first_k_set[n].push_back(test);
+                                    } else if (test.length() > k) {
+                                        first_k_set[n].push_back(test.substr(0,k));
                                     } else {
-                                        mightbe.push_back(another);
+                                        mightbe.push_back(test);
+                                        for (int s = 0; s < mightbe.size(); s++) {
+                                            if (mightbe[s] == "") 
+                                                mightbe.erase(mightbe.begin()+ s);
+                                        }
                                     }
+                                    
                                 }
                             }
                         }
                         if (right.type == 2) {
-                            cout << "term" << endl;
+                            // cout << "term" << endl;
                             vector<string> buf = mightbe;
+                            // cout << "buf now ";
+                            // for(int i = 0; i < buf.size(); i++) {
+                            //     cout << buf[i] << " ";
+                            // }
+                            // cout << endl;
                             for(int i = 0; i < buf.size(); i++) {
+                                // чистим возможный к-префикс
                                 mightbe.erase(mightbe.begin()+ i);
-                                buf[i] += right.val;
-                                cout << "candidate now is: " << buf[i] << endl;
-                                if (buf[i].length() == k) {
-                                    first_k_set[n].push_back(buf[i]);
+                                // cout << "EL t:"<< buf[i] << endl;
+                                string test = buf[i] + right.val;
+                                // cout << "test is now: " << test << endl;
+                                if (test.length() == k) {
+                                    first_k_set[n].push_back(test);
                                 } else {
-                                    mightbe.push_back(buf[i]);
+                                    mightbe.push_back(test);
+                                    for (int s = 0; s < mightbe.size(); s++) {
+                                        if (mightbe[s] == "") 
+                                            mightbe.erase(mightbe.begin()+ s);
+                                    }
                                 }
                             }
-                        }
+                        }    
                         if (mightbe.size() == 0) break;
                     }
-                    for (int s = 0; s < mightbe.size(); s++) {
-                        if (mightbe[s] == "") mightbe.erase(mightbe.begin()+ s);
-                    }   
-                }
+                    // cout << "MIGHTBE K PREFIX: ";
+                    // for (auto c : mightbe) {
+                    //     cout << c << " ";
+                    // }
+                    // cout << endl;
+                    for (auto c : mightbe) {
+                        first_k_set[n].push_back(c);
+                    }
+                    sort(first_k_set[n].begin(), first_k_set[n].end());
+                    auto lt = unique(first_k_set[n].begin(), first_k_set[n].end());
+                    first_k_set[n].erase(lt, first_k_set[n].end());
+                }     
             }
-            sort(first_k_set[n].begin(), first_k_set[n].end());
-            auto lt = unique(first_k_set[n].begin(), first_k_set[n].end());
-            first_k_set[n].erase(lt, first_k_set[n].end());
-
-            cout << "set now" << endl;
-            printFirstkSet(k);
-            int newSetSize = first_k_set[n].size();
-            if (newSetSize != setSize)
+            // cout << "set now" << endl;
+            // printFirstkSet(k);
+            if (first_k_set[n].size() != setSize)
             changed = true;    
         }
     }
@@ -811,18 +781,20 @@ int main() {
     cout << "> Parsed grammar <" << endl;
     printTerms();
     printGrammar();
+
     //убираем непорождающие нетерминалы
     removeNonGeneratingNterms();
-    cout << "> Grammar with removed non-generating nonterminals <" << endl;
-    printTerms();
+    // cout << "> Grammar with removed non-generating nonterminals <" << endl;
+    //printTerms();
     updateGrammar();
-    printGrammar();
+    //printGrammar();
+
     //убираем недостижимые нетерминалы
-    cout << "> Grammar with removed unreachable nonterminals <" << endl;
+    // cout << "> Grammar with removed unreachable nonterminals <" << endl;
     removeUnreachableNterms();
-    printTerms();
+    //printTerms();
     updateGrammar();
-    printGrammar();
+    //printGrammar();
     cout << "> FIRST 1 sets for nonterminals <" << endl;
     constructFirst1();
     printFirst1Set();
@@ -837,4 +809,3 @@ int main() {
 
 // ааааааааа (крик)
 // хотела бы я сказать, что сиплюсплюснулась настолько, чтобы понять 3 лабораторную, но пока нет...
-// тесты 1, 3, 6 
