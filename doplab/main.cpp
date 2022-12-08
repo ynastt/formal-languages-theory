@@ -298,23 +298,25 @@ void updateGrammar() {
 void removeNonGeneratingNterms() {
     int setSize = 0;
     int r = 0;
-    //cout << "grammar size:" << grammar.size() << endl;
-    //cout << "==ШАГ 1==" <<endl;
+    // cout << "grammar size:" << grammar.size() << endl;
+    // cout << "==ШАГ 1==" <<endl;
     while (r < grammar.size()) {
         string nterm = grammar[r].left;
         vector<rightPart> rights = grammar[r].right;
-        //cout << "NTERM: " << nterm << endl;
-        //cout << "RIGHTPART: ";
+        // cout << "NTERM: " << nterm << endl;
+        // cout << "RIGHTPART: ";
         // for (int j = 0;  j < rights.size(); j++) {
         //     cout << "{type:" << rights[j].type << ", val:" << rights[j].val << "}";
         //     if (j != rights.size() - 1) cout << ", ";   
         // }
         // cout << endl;
+
         // шаг 1 находим правила не содерж нетерминалов в правой части
         if (FirstIndexNterminRightPart(rights) != -1)  {
+            // cout << "есть нетерминалы, идем дальше" << endl;
             r++;
         } else {
-            //cout << "не содержит нетерминалов в правой части" << endl;
+            // cout << "не содержит нетерминалов в правой части" << endl;
             if (!isInGenNterms(nterm, genNterms) && nterm != "") {
                 genNterms.push_back(nterm);
             }
@@ -333,7 +335,8 @@ void removeNonGeneratingNterms() {
     // шаг 2 если найдено правило, все нетерминалы правой части которого уже
     // входят в множество, то добавляем левый нетерминал 
     // если множество порождающих нетерминалов изменилось, повторяем шаг 2
-    while (genNterms.size() > setSize) {
+    // cout << "grammar size" << grammar.size() << endl;
+    while (genNterms.size() != setSize) {
         r = 0;
         setSize = genNterms.size();
         while (r < grammar.size()) {   
@@ -348,23 +351,23 @@ void removeNonGeneratingNterms() {
             // cout << endl;
             int col = getQuantityOfNterms(rights);
             int k = 0;
-            //cout << "количество нетерминалов в правой части: " << col << endl;
+            // cout << "количество нетерминалов в правой части: " << col << endl;
             for (int j = 0;  j < rights.size(); j++) {
                 if (col == 0) {
-                    //cout << "ZERO NTERMS AT RIGHT" << endl;
-                    r++;
+                    // cout << "ZERO NTERMS AT RIGHT" << endl;
+                    continue;
                 }
                 if (col > 0) {    
                     string cur = rights[j].val;
-                    //cout << "поиск " << cur << endl;
+                    // cout << "поиск " << cur << endl;
                     if (isInGenNterms(cur,  genNterms)) {
                         k++;
-                        //cout << "нетерминал уже есть в множестве порождающих k="<< k << endl;
+                        // cout << "нетерминал уже есть в множестве порождающих k="<< k << endl;
                         if (k == col) {
-                            //cout << "!правило где все нетерминалы справа в множестве порождающих!" << endl;
+                            // cout << "!правило где все нетерминалы справа в множестве порождающих!" << endl;
                             if (!isInGenNterms(nterm, genNterms)) {
                                 genNterms.push_back(nterm);
-                                //cout << "size of gen nterms: " << genNterms.size() << endl;
+                                // cout << "size of gen nterms: " << genNterms.size() << endl;
                                 // cout << "===" << endl;   
                                 // for (auto n: genNterms) {
                                 //     cout << n << " ";
@@ -373,25 +376,27 @@ void removeNonGeneratingNterms() {
                                 // cout << "===" << endl; 
                                 // cout << endl;
                             }
-                            r++;
                         }
                     } else {
-                        if (binary_search(nonTerms.begin(), nonTerms.end(), cur)) {
-                            //cout << "не принадлежит порождающим, следующее правило" << endl;
-                            r++;
-                        }
+                        //if (binary_search(nonTerms.begin(), nonTerms.end(), cur)) {
+                            // cout << "не принадлежит порождающим, следующее правило" << endl;
+                            continue;
+                            //r++;
+                        //}
                     }
+                    
                 }
                 
             }
+            r++;
         }
     }  
-    /*cout << "===" << endl;   
+    cout << "===" << endl;   
     for (auto n: genNterms) {
         cout << n << " ";
     }
     cout << endl;
-    cout << "===" << endl; */
+    cout << "===" << endl; 
     cout << endl;
     nonTerms = genNterms;   
 }
@@ -401,7 +406,7 @@ void removeUnreachableNterms() {
     int setSize = 0;
     int r = 0;
     //cout << "grammar size:" << grammar.size() << endl;
-    while (reachNterms.size() > setSize) {
+    while (reachNterms.size() != setSize) {
         setSize = reachNterms.size();
         while (r < grammar.size()) {
             string nterm = grammar[r].left;
@@ -784,17 +789,17 @@ int main() {
 
     //убираем непорождающие нетерминалы
     removeNonGeneratingNterms();
-    // cout << "> Grammar with removed non-generating nonterminals <" << endl;
+    cout << "> Grammar with removed non-generating nonterminals <" << endl;
     //printTerms();
     updateGrammar();
-    //printGrammar();
+    printGrammar();
 
     //убираем недостижимые нетерминалы
-    // cout << "> Grammar with removed unreachable nonterminals <" << endl;
+    cout << "> Grammar with removed unreachable nonterminals <" << endl;
     removeUnreachableNterms();
     //printTerms();
     updateGrammar();
-    //printGrammar();
+    printGrammar();
     cout << "> FIRST 1 sets for nonterminals <" << endl;
     constructFirst1();
     printFirst1Set();
