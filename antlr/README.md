@@ -7,7 +7,8 @@
 - Установлен генератор ANTLR
 - Отчет об ограничениях, накладываемых генератором на грамматику [здесь](https://github.com/ynastt/formal-languages-theory/blob/main/antlr/otchet.pdf)
 - На языке генератора написана грамматика для академической регулярки (a*bc*)
-- Если слово введенное в входной поток не принадлежит языку данной грамматики, то появится строка с предупреждением о нарушении грамматики
+- Если слово, введенное во входной поток, не принадлежит языку данной грамматики, то появится строка с предупреждением о нарушении грамматики.
+
 Например:
 ```
 >>> aaaaaac
@@ -16,9 +17,9 @@ DONE!
 ```
 
 ### Полезные ссылочки
-[ANTLR v4](https://github.com/pboyer/antlr4)
-[Introduction to ANTLR using python](https://faun.pub/introduction-to-antlr-python-af8a3c603d23)
-[How to create a Python lexer or parser](https://github.com/antlr/antlr4/blob/master/doc/python-target.md)
-[ANTLR Tool Command Line Options](https://github.com/antlr/antlr4/blob/master/doc/tool-options.md)
+- [ANTLR v4](https://github.com/pboyer/antlr4)
+- [Introduction to ANTLR using python](https://faun.pub/introduction-to-antlr-python-af8a3c603d23)
+- [How to create a Python lexer or parser](https://github.com/antlr/antlr4/blob/master/doc/python-target.md)
+- [ANTLR Tool Command Line Options](https://github.com/antlr/antlr4/blob/master/doc/tool-options.md)
 
-~~ на нашла туториал на Go :( ~~
+ ~~не нашла туториал на Go :(~~
