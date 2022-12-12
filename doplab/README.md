@@ -26,7 +26,7 @@ left: N, right: {type:1, val:N}, {type:2, val:t}
 .
 .
 RULE n
-left: S, right: {type:1, val:N}, {type:2, val:t}
+left: N, right: {type:1, val:N}, {type:2, val:t}
 ```
 ##### Дополнительно можно вывести грамматику без непорождающих нетерминалов:
 ```
@@ -36,7 +36,7 @@ printGrammar();
 ```
 формат выхода аналогичный, но убраны правила с непорождающими нетерминалами 
 
-> Дополнительно можно вывести грамматику без непорождающих и недостижимых нетерминалов:
+##### Дополнительно можно вывести грамматику без непорождающих и недостижимых нетерминалов:
 ```
 removeNonGeneratingNterms(); 
 removeUnreachableNterms(); 
@@ -55,6 +55,24 @@ printGrammar();
 [B]->g |
 [C]->l
 [C]->ki |
+
+> FIRST 1 sets for nonterminals <
+FIRST1(A) = {a, eps}
+FIRST1(B) = {eps, g}
+FIRST1(C) = {eps, k, l}
+FIRST1(S) = {A, a, eps, g, k, l}
+
+> FOLLOW sets for nonterminals <
+FOLLOW(A) = {a, d, g, k, l}
+FOLLOW(B) = {d, k, l}
+FOLLOW(C) = {d}
+FOLLOW(S) = {$}
+
+> FIRST k sets for nonterminals <
+FIRST2(A) = {ab, eps}
+FIRST2(B) = {eps, g}
+FIRST2(C) = {eps, ki, l}
+FIRST2(S) = {a, ab, eps, gd, gk, gl}
 ```
 
 ###### TODO
