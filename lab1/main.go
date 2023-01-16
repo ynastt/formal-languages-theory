@@ -69,7 +69,7 @@ func removeClass(firstEqClasses []string, class1 string, nonTerm string) []strin
 func parseTerms() ([]string, []string, map[string][]string) {
 	var nonTerms, terms []string
 	rules := make(map[string][]string)
-	file, err := os.Open("tests/test3.txt")
+	file, err := os.Open("tests/test8.txt")
 	if err != nil {
 		log.Fatalf("Error with openning file: %s", err)
 	}
@@ -234,6 +234,7 @@ func outputNewRules(termForms, rules map[string][]string, eqGenClass []string, e
 					fmt.Printf("%s,", string(sym))
 				}
 			}
+			// оставляю только первый нетерминал из класса эквивалентости.
 			c = strings.ReplaceAll(c, c[1:], "")
 			eqGenClass[i] = c
 		} else {
@@ -250,22 +251,52 @@ func outputNewRules(termForms, rules map[string][]string, eqGenClass []string, e
 			}
 		}
 	}
+	// замена правил
 	for nonTerm, form := range termForms {
+		//fmt.Printf("debug-change rules for nonterm  %s\n", nonTerm)
 		for _, f := range form {
 			classOld := findClass(nonTerm, eqGenClassOld)
 			class := findClass(nonTerm, eqGenClass)
+			// small change i hope it'll work
+			if class == "" {
+				if strings.ContainsAny(classOld, nonTerm) {
+					class = string(classOld[0])
+				}
+			}
+			// let`s see
+			//fmt.Printf("debug-change rules from %s to  %s\n", classOld, class)
 			if len(class) != 0 {
 				if len(f) == 1 && (strings.ContainsAny(t, f) || strings.ContainsAny(gnt, f)) {
 					continue
 				} else {
 					for j, r := range rules[nonTerm] {
 						if len(f) == len(r) {
+							//fmt.Printf("debug-change rules RULE %s\n", r)
 							for _, sym := range r {
+								//fmt.Printf("debug-change rules SYM  %s\n", string(sym))
 								if strings.ContainsAny(t, string(sym)) {
 									continue
 								}
+								if strings.ContainsAny(gnt, string(sym)) {
+									continue
+								}
 								if strings.ContainsAny(classOld, string(sym)) {
+									//fmt.Printf("debug-change rules NOW CHANGE %s to %s\n", string(sym), class)
 									r = strings.ReplaceAll(r, string(sym), class)
+									rules[nonTerm][j] = r
+									rules[nonTerm] = checkForDuplicates(rules[nonTerm])
+								}
+								if strings.ContainsAny(nt, string(sym)) {
+									//its nonTerm check if it has len(eqClass)>1
+									classOldN := findClass(string(sym), eqGenClassOld)
+									classN := findClass(string(sym), eqGenClass)
+									if classN == "" && !strings.ContainsAny(gnt, string(sym)) {
+										if strings.ContainsAny(classOldN, string(sym)) {
+											classN = string(classOldN[0])
+										}
+									}
+									//fmt.Printf("debug-change rules NOW CHANGE nTerm in right part of rule %s to %s\n", string(sym), classN)
+									r = strings.ReplaceAll(r, string(sym), classN)
 									rules[nonTerm][j] = r
 									rules[nonTerm] = checkForDuplicates(rules[nonTerm])
 								}
@@ -281,14 +312,14 @@ func outputNewRules(termForms, rules map[string][]string, eqGenClass []string, e
 func main() {
 	terms, nonTerms, rules := parseTerms()
 	nt := strings.Join(nonTerms, "")
-	//fmt.Println("nonterms:", nonTerms[0:])
-	//fmt.Println("terms:", terms[0:])
-	//fmt.Println("rules:", rules)
+	fmt.Println("nonterms:", nonTerms[0:])
+	fmt.Println("terms:", terms[0:])
+	fmt.Println("rules:", rules)
 	termForms, eqNotGenClass := makeListOfTermForms(nonTerms, rules, nt)
-	//fmt.Println("term forms:", termForms)
-	//fmt.Println("notGenEqClass:", eqNotGenClass)
+	fmt.Println("term forms:", termForms)
+	fmt.Println("notGenEqClass:", eqNotGenClass)
 	eqGenClass := eqClassesDivision(termForms)
-	//fmt.Println("first eq classes:", eqGenClass)
+	fmt.Println("first eq classes:", eqGenClass)
 	var flag bool
 	t := strings.Join(terms, "")
 	gnt := strings.Join(eqNotGenClass, "")
@@ -298,11 +329,14 @@ func main() {
 		//fmt.Println("again")
 		flag, eqGenClass = checkEqClassDivision(eqGenClass, rules, termForms, t, nt, gnt)
 	}
-	//fmt.Println("new eq classes:", eqGenClass)
+	fmt.Println("new eq classes:", eqGenClass)
 	outputNewRules(termForms, rules, eqGenClass, eqNotGenClass, t, nt, gnt)
 	for nonTerm, _ := range termForms {
 		for j, _ := range rules[nonTerm] {
 			class := findClass(nonTerm, eqGenClass)
+			//if class != "" {
+			//	fmt.Printf("debug: class - %s\n", class)
+			//}
 			if nonTerm == class {
 				fmt.Printf("%s -> %s\n", nonTerm, rules[nonTerm][j])
 			}
